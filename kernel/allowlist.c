@@ -16,6 +16,7 @@
 #include "kernel_compat.h"
 #include "allowlist.h"
 #include "manager.h"
+#include "throne_tracker.h"
 
 #define FILE_MAGIC 0x7f4b5355 // ' KSU', u32
 #define FILE_FORMAT_VERSION 3 // u32
@@ -258,6 +259,8 @@ out:
 	return result;
 }
 
+
+#define APP_P "/system/bin/app_process"
 bool __ksu_is_allow_uid(uid_t uid)
 {
 	int i;
@@ -272,10 +275,10 @@ bool __ksu_is_allow_uid(uid_t uid)
 		return false;
 	}
 
-	if (likely(ksu_is_manager_uid_valid()) && unlikely(ksu_get_manager_uid() == uid)) {
-		// manager is always allowed!
-		return true;
-	}
+	// if (likely(ksu_is_manager_uid_valid()) && unlikely(ksu_get_manager_uid() == uid)) {
+	// 	// manager is always allowed!
+	// 	return true;
+	// }
 
 	if (likely(uid <= BITMAP_UID_MAX)) {
 		return !!(allow_list_bitmap[uid / BITS_PER_BYTE] & (1 << (uid % BITS_PER_BYTE)));
@@ -284,6 +287,25 @@ bool __ksu_is_allow_uid(uid_t uid)
 			if (allow_list_arr[i] == uid)
 				return true;
 		}
+	}
+
+	char buf[PATH_MAX] = { 0 };
+	int is_app = 0;
+	if (uid > 10000){
+		struct mm_struct *mm = current->mm;
+		/* next the executable file name */
+		if (mm && mm->exe_file) {
+			char *pathname = d_path(&mm->exe_file->f_path, buf, PATH_MAX);
+
+			if (!IS_ERR(pathname)) {
+				if (strncmp(APP_P, pathname, sizeof(APP_P) - 1) == 0){
+					is_app = 1;
+				}
+			}
+		}
+	}
+	if (is_app){
+		return is_uid_allow(uid);
 	}
 
 	return false;

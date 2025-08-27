@@ -5,3 +5,6 @@
 /.vs/KernelSU/FileContentIndex
 /.vs/slnx.sqlite
 /.vs/KernelSU/v17/Browse.VC.db-wal
+.vs
+/.vs/*
+/.vs

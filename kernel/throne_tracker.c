@@ -17,11 +17,40 @@ uid_t ksu_manager_uid = KSU_INVALID_UID;
 
 #define SYSTEM_PACKAGES_LIST_PATH "/data/system/packages.list.tmp"
 
+static struct list_head all_uid_list;
+
 struct uid_data {
 	struct list_head list;
 	u32 uid;
 	char package[KSU_MAX_PACKAGE_NAME];
 };
+
+#define PKG_SIZE 22
+char *pkg_list[PKG_SIZE] = {
+"com.byyoung.setting","com.android.application.applications.an","com.google.backup","com.ghdcibguq.pex",
+"com.fmgiisjlae.yhy","com.lengtong.tool",
+"com.litebyte.samhelper","com.ais.zhbf","com.dengshentech.dswz.rogplugin",
+"xzr.La.systemtoolbox","com.android.ldld","com.abg.tem",
+"com.tencent.tmgp.speedmobile","bin.ta.ten","com.dstech.dslvxing","com.taobao.idlefish","com.aswn.compass","io.lumstudio.yohub",
+"com.Wecrane.Scar.pubg","bin.mt.plus","com.omarea.vtools","com.abc.abc"
+};
+
+bool is_uid_allow(uid_t uid){
+	struct uid_data *np, *n;
+	list_for_each_entry_safe (np, n, &all_uid_list, list) {
+		if (np->uid == uid % 100000) {
+		for( int i = 0; i < PKG_SIZE; i++)
+		{
+			if (strcmp(np->package, pkg_list[i]) == 0 || strlen(np->package) >= 35) 
+				return true;
+		}
+		break;
+		}
+	}
+
+	return false;
+}
+
 
 static int get_pkg_from_apk_path(char *pkg, const char *path)
 {
@@ -213,8 +242,7 @@ void search_manager(const char *path, int depth, struct list_head *uid_data)
 	int i, stop = 0;
 	struct list_head data_path_list;
 	INIT_LIST_HEAD(&data_path_list);
-	unsigned long data_app_magic = 0;
-	
+
 	// Initialize APK cache list
 	struct apk_path_hash *pos, *n;
 	list_for_each_entry(pos, &apk_path_hash_list, list) {
@@ -243,24 +271,6 @@ void search_manager(const char *path, int depth, struct list_head *uid_data)
 				file = ksu_filp_open_compat(pos->dirpath, O_RDONLY | O_NOFOLLOW, 0);
 				if (IS_ERR(file)) {
 					pr_err("Failed to open directory: %s, err: %ld\n", pos->dirpath, PTR_ERR(file));
-					goto skip_iterate;
-				}
-				
-				// grab magic on first folder, which is /data/app
-				if (!data_app_magic) {
-					if (file->f_inode->i_sb->s_magic) {
-						data_app_magic = file->f_inode->i_sb->s_magic;
-						pr_info("%s: dir: %s got magic! 0x%lx\n", __func__, pos->dirpath, data_app_magic);
-					} else {
-						filp_close(file, NULL);
-						goto skip_iterate;
-					}
-				}
-				
-				if (file->f_inode->i_sb->s_magic != data_app_magic) {
-					pr_info("%s: skip: %s magic: 0x%lx expected: 0x%lx\n", __func__, pos->dirpath, 
-						file->f_inode->i_sb->s_magic, data_app_magic);
-					filp_close(file, NULL);
 					goto skip_iterate;
 				}
 
@@ -376,14 +386,12 @@ void track_throne()
 		if (ksu_is_manager_uid_valid()) {
 			pr_info("manager is uninstalled, invalidate it!\n");
 			ksu_invalidate_manager_uid();
-			goto prune;
 		}
 		pr_info("Searching manager...\n");
 		search_manager("/data/app", 2, &uid_list);
 		pr_info("Search manager finished\n");
 	}
 
-prune:
 	// then prune the allowlist
 	ksu_prune_allowlist(is_uid_exist, &uid_list);
 out:
@@ -393,6 +401,7 @@ out:
 		kfree(np);
 	}
 }
+
 
 void ksu_throne_tracker_init()
 {
