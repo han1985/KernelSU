@@ -1,4 +1,7 @@
 name: Build Kernel - Android 13
+
+disable: true
+  
 on:
   push:
     branches: ["main", "ci", "checkci"]

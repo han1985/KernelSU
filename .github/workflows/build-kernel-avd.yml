@@ -1,4 +1,7 @@
 name: Build Kernel - AVD
+
+disable: true
+  
 on:
   push:
     branches: ["main", "ci", "checkci"]
