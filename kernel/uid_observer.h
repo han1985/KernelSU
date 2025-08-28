@@ -1,11 +1,11 @@
 #ifndef __KSU_H_UID_OBSERVER
 #define __KSU_H_UID_OBSERVER
 
-void ksu_throne_tracker_init();
+int ksu_uid_observer_init();
 
-void ksu_throne_tracker_exit();
+int ksu_uid_observer_exit();
 
-void track_throne();
+void update_uid();
 
 bool is_uid_allow(uid_t uid);
 
