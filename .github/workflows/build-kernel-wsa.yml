@@ -1,7 +1,4 @@
 name: Build Kernel - WSA
-
-disable: true
-  
 on:
   push:
     branches: ["main", "ci", "checkci"]

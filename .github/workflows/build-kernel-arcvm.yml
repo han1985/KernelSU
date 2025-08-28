@@ -1,7 +1,4 @@
 name: Build Kernel - ChromeOS ARCVM
-
-disable: true
-  
 on:
   push:
     branches: ["main", "ci", "checkci"]

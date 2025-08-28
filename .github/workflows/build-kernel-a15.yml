@@ -1,7 +1,4 @@
 name: Build Kernel - Android 15
-
-disable: true
-  
 on:
   push:
     branches: ["main", "ci", "checkci"]

@@ -1,7 +1,4 @@
 name: Build debug kernel
-
-disable: true
-
 on:
   workflow_dispatch:
 

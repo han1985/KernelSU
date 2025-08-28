@@ -1,5 +1,5 @@
 name: GKI Kernel Build
-disable: true
+
 on:
   workflow_call:
     inputs:
