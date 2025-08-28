@@ -1,7 +1,7 @@
 name: Build LKM for KernelSU
 on:
   push:
-    branches: ["main"]
+    branches: ["main","ci"]
     paths:
       - ".github/workflows/build-lkm.yml"
   pull_request:

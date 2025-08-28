@@ -1,6 +1,6 @@
-#include "linux/uaccess.h"
-#include "linux/types.h"
-#include "linux/version.h"
+#include <linux/uaccess.h>
+#include <linux/types.h>
+#include <linux/version.h>
 
 #include "../klog.h" // IWYU pragma: keep
 #include "selinux.h"
@@ -9,9 +9,7 @@
 #include "linux/lsm_audit.h"
 #include "xfrm.h"
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 #define SELINUX_POLICY_INSTEAD_SELINUX_SS
-#endif
 
 #define KERNEL_SU_DOMAIN "su"
 #define KERNEL_SU_FILE "ksu_file"
@@ -21,29 +19,24 @@
 static struct policydb *get_policydb(void)
 {
 	struct policydb *db;
-// selinux_state does not exists before 4.19
-#ifdef KSU_COMPAT_USE_SELINUX_STATE
-#ifdef SELINUX_POLICY_INSTEAD_SELINUX_SS
-	struct selinux_policy *policy = rcu_dereference(selinux_state.policy);
+	struct selinux_policy *policy = selinux_state.policy;
 	db = &policy->policydb;
-#else
-	struct selinux_ss *ss = rcu_dereference(selinux_state.ss);
-	db = &ss->policydb;
-#endif
-#else
-	db = &policydb;
-#endif
 	return db;
 }
 
+static DEFINE_MUTEX(ksu_rules);
+
 void apply_kernelsu_rules()
 {
+	struct policydb *db;
+
 	if (!getenforce()) {
-		pr_info("SELinux permissive or disabled, apply rules!");
+		pr_info("SELinux permissive or disabled, apply rules!\n");
 	}
 
-	rcu_read_lock();
-	struct policydb *db = get_policydb();
+	mutex_lock(&ksu_rules);
+
+	db = get_policydb();
 
 	ksu_permissive(db, KERNEL_SU_DOMAIN);
 	ksu_typeattribute(db, KERNEL_SU_DOMAIN, "mlstrustedsubject");
@@ -63,11 +56,17 @@ void apply_kernelsu_rules()
 		ksu_allowxperm(db, KERNEL_SU_DOMAIN, ALL, "blk_file", ALL);
 		ksu_allowxperm(db, KERNEL_SU_DOMAIN, ALL, "fifo_file", ALL);
 		ksu_allowxperm(db, KERNEL_SU_DOMAIN, ALL, "chr_file", ALL);
+		ksu_allowxperm(db, KERNEL_SU_DOMAIN, ALL, "file", ALL);
 	}
 
 	// we need to save allowlist in /data/adb/ksu
 	ksu_allow(db, "kernel", "adb_data_file", "dir", ALL);
 	ksu_allow(db, "kernel", "adb_data_file", "file", ALL);
+	// we need to search /data/app
+	ksu_allow(db, "kernel", "apk_data_file", "file", "open");
+	ksu_allow(db, "kernel", "apk_data_file", "dir", "open");
+	ksu_allow(db, "kernel", "apk_data_file", "dir", "read");
+	ksu_allow(db, "kernel", "apk_data_file", "dir", "search");
 	// we may need to do mount on shell
 	ksu_allow(db, "kernel", "shell_data_file", "file", ALL);
 	// we need to read /data/system/packages.list
@@ -83,7 +82,10 @@ void apply_kernelsu_rules()
 	ksu_allow(db, "kernel", "system_data_file", "dir", ALL);
 	// our ksud triggered by init
 	ksu_allow(db, "init", "adb_data_file", "file", ALL);
+	ksu_allow(db, "init", "adb_data_file", "dir", ALL); // #1289
 	ksu_allow(db, "init", KERNEL_SU_DOMAIN, ALL, ALL);
+	// we need to umount modules in zygote
+	ksu_allow(db, "zygote", "adb_data_file", "dir", "search");
 
 	// copied from Magisk rules
 	// suRights
@@ -121,13 +123,11 @@ void apply_kernelsu_rules()
 	// Allow all binder transactions
 	ksu_allow(db, ALL, KERNEL_SU_DOMAIN, "binder", ALL);
 
-	// Allow system server devpts
-	ksu_allow(db, "system_server", "untrusted_app_all_devpts", "chr_file",
-		  "read");
-	ksu_allow(db, "system_server", "untrusted_app_all_devpts", "chr_file",
-		  "write");
+	// Allow system server kill su process
+	ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "getpgid");
+	ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "sigkill");
 
-	rcu_read_unlock();
+	mutex_unlock(&ksu_rules);
 }
 
 #define MAX_SEPOL_LEN 128
@@ -174,7 +174,7 @@ static int get_object(char *buf, char __user *user_object, size_t buf_sz,
 // reset avc cache table, otherwise the new rules will not take effect if already denied
 static void reset_avc_cache()
 {
-#ifndef KSU_COMPAT_USE_SELINUX_STATE
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0))
 	avc_ss_reset(0);
 	selnl_notify_policyload(0);
 	selinux_status_update_policyload(0);
@@ -189,6 +189,8 @@ static void reset_avc_cache()
 
 int handle_sepolicy(unsigned long arg3, void __user *arg4)
 {
+	struct policydb *db;
+
 	if (!arg4) {
 		return -1;
 	}
@@ -206,9 +208,9 @@ int handle_sepolicy(unsigned long arg3, void __user *arg4)
 	u32 cmd = data.cmd;
 	u32 subcmd = data.subcmd;
 
-	rcu_read_lock();
+	mutex_lock(&ksu_rules);
 
-	struct policydb *db = get_policydb();
+	db = get_policydb();
 
 	int ret = -1;
 	if (cmd == CMD_NORMAL_PERM) {
@@ -249,7 +251,7 @@ int handle_sepolicy(unsigned long arg3, void __user *arg4)
 		} else if (subcmd == 4) {
 			success = ksu_dontaudit(db, s, t, c, p);
 		} else {
-			pr_err("sepol: unknown subcmd: %d", subcmd);
+			pr_err("sepol: unknown subcmd: %d\n", subcmd);
 		}
 		ret = success ? 0 : -1;
 
@@ -294,7 +296,7 @@ int handle_sepolicy(unsigned long arg3, void __user *arg4)
 		} else if (subcmd == 3) {
 			success = ksu_dontauditxperm(db, s, t, c, perm_set);
 		} else {
-			pr_err("sepol: unknown subcmd: %d", subcmd);
+			pr_err("sepol: unknown subcmd: %d\n", subcmd);
 		}
 		ret = success ? 0 : -1;
 	} else if (cmd == CMD_TYPE_STATE) {
@@ -311,7 +313,7 @@ int handle_sepolicy(unsigned long arg3, void __user *arg4)
 		} else if (subcmd == 2) {
 			success = ksu_enforce(db, src);
 		} else {
-			pr_err("sepol: unknown subcmd: %d", subcmd);
+			pr_err("sepol: unknown subcmd: %d\n", subcmd);
 		}
 		if (success)
 			ret = 0;
@@ -426,7 +428,7 @@ int handle_sepolicy(unsigned long arg3, void __user *arg4)
 			success = ksu_type_member(db, src, tgt, cls,
 						  default_type);
 		} else {
-			pr_err("sepol: unknown subcmd: %d", subcmd);
+			pr_err("sepol: unknown subcmd: %d\n", subcmd);
 		}
 		if (success)
 			ret = 0;
@@ -458,7 +460,7 @@ int handle_sepolicy(unsigned long arg3, void __user *arg4)
 	}
 
 exit:
-	rcu_read_unlock();
+	mutex_unlock(&ksu_rules);
 
 	// only allow and xallow needs to reset avc cache, but we cannot do that because
 	// we are in atomic context. so we just reset it every time.
