@@ -1,5 +1,4 @@
 name: Build Manager Apk
-
 on:
   push:
     branches: [ "main", "ci"]
