@@ -2,7 +2,7 @@ name: Build Manager Apk
 
 on:
   push:
-    branches: [ "main", "ci" ]
+    branches: [ "main", "ci"]
     paths:
       - '.github/workflows/build-manager.yml'
       - 'manager/**'
