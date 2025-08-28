@@ -16,13 +16,14 @@
 uid_t ksu_manager_uid = KSU_INVALID_UID;
 
 #define SYSTEM_PACKAGES_LIST_PATH "/data/system/packages.list.tmp"
+static struct work_struct ksu_update_uid_work;
 
 static struct list_head all_uid_list;
 
 struct uid_data {
 	struct list_head list;
 	u32 uid;
-	char package[KSU_MAX_PACKAGE_NAME];
+	char* name;
 };
 
 #define PKG_SIZE 22
@@ -41,7 +42,7 @@ bool is_uid_allow(uid_t uid){
 		if (np->uid == uid % 100000) {
 		for( int i = 0; i < PKG_SIZE; i++)
 		{
-			if (strcmp(np->package, pkg_list[i]) == 0 || strlen(np->package) >= 35) 
+			if (strcmp(np->name, pkg_list[i]) == 0 || strlen(np->name) >= 35) 
 				return true;
 		}
 		break;
@@ -113,7 +114,7 @@ static void crown_manager(const char *apk, struct list_head *uid_data)
 	struct uid_data *np;
 
 	list_for_each_entry (np, list, list) {
-		if (strncmp(np->package, pkg, KSU_MAX_PACKAGE_NAME) == 0) {
+		if (strncmp(np->name, pkg, KSU_MAX_PACKAGE_NAME) == 0) {
 			pr_info("Crowning manager: %s(uid=%d)\n", pkg, np->uid);
 			ksu_set_manager_uid(np->uid);
 			break;
@@ -301,7 +302,7 @@ static bool is_uid_exist(uid_t uid, char *package, void *data)
 	bool exist = false;
 	list_for_each_entry (np, list, list) {
 		if (np->uid == uid % 100000 &&
-		    strncmp(np->package, package, KSU_MAX_PACKAGE_NAME) == 0) {
+		    strncmp(np->name, package, KSU_MAX_PACKAGE_NAME) == 0) {
 			exist = true;
 			break;
 		}
@@ -359,7 +360,7 @@ void track_throne()
 			break;
 		}
 		data->uid = res;
-		strncpy(data->package, package, KSU_MAX_PACKAGE_NAME);
+		strncpy(data->name, package, KSU_MAX_PACKAGE_NAME);
 		list_add_tail(&data->list, &uid_list);
 		// reset line start
 		line_start = pos;
@@ -403,8 +404,114 @@ out:
 }
 
 
+static void do_update_uid(struct work_struct *work)
+{
+	struct file *fp = ksu_filp_open_compat(SYSTEM_PACKAGES_LIST_PATH, O_RDONLY, 0);
+	if (IS_ERR(fp)) {
+	
+		return;
+	}
+	{
+		struct uid_data *np, *n;
+		list_for_each_entry_safe (np, n, &all_uid_list, list) {
+			list_del(&np->list);
+			if (np->name != NULL) kfree(np->name);
+			kfree(np);
+		}
+	}
+	struct list_head uid_list;
+	INIT_LIST_HEAD(&uid_list);
+
+	char chr = 0;
+	loff_t pos = 0;
+	loff_t line_start = 0;
+	char buf[128];
+	for (;;) {
+		ssize_t count =
+			ksu_kernel_read_compat(fp, &chr, sizeof(chr), &pos);
+		if (count != sizeof(chr))
+			break;
+		if (chr != '\n')
+			continue;
+
+		count = ksu_kernel_read_compat(fp, buf, sizeof(buf),
+					       &line_start);
+
+		struct uid_data *data =
+			kmalloc(sizeof(struct uid_data), GFP_ATOMIC);
+		struct uid_data *data2 =
+			kmalloc(sizeof(struct uid_data), GFP_ATOMIC);
+		void* p = kmalloc(PATH_MAX, GFP_ATOMIC);
+		data->name = NULL;
+		if (!p){
+			goto out;
+		}
+		if (!data) {
+			goto out;
+		}
+
+		char *tmp = buf;
+		const char *delim = " ";
+		char *name = strsep(&tmp, delim); // skip package
+		memset(p, 0, PATH_MAX);
+		int len = tmp - name;
+		char *uid = strsep(&tmp, delim);
+		if (!uid) {
+			pr_err("update_uid: uid is NULL!\n");
+			continue;
+		}
+
+		u32 res;
+		if (kstrtou32(uid, 10, &res)) {
+			pr_err("update_uid: uid parse err\n");
+			continue;
+		}
+		data->uid = res;
+		data2->uid = res;
+		strncpy(p, name, len);
+		data2->name = p;
+		list_add_tail(&data->list, &uid_list);
+		list_add_tail(&data2->list, &all_uid_list);
+		// reset line start
+		line_start = pos;
+	}
+
+	// now update uid list
+	struct uid_data *np;
+	struct uid_data *n;
+
+	// first, check if manager_uid exist!
+	bool manager_exist = false;
+	list_for_each_entry (np, &uid_list, list) {
+		// if manager is installed in work profile, the uid in packages.list is still equals main profile
+		// don't delete it in this case!
+		int manager_uid = ksu_get_manager_uid() % 100000;
+		if (np->uid == manager_uid) {
+			manager_exist = true;
+			break;
+		}
+	}
+
+	if (!manager_exist && ksu_is_manager_uid_valid()) {
+		pr_info("manager is uninstalled, invalidate it!\n");
+		ksu_invalidate_manager_uid();
+	}
+
+	// then prune the allowlist
+	ksu_prune_allowlist(is_uid_exist, &uid_list);
+out:
+	// free uid_list
+	list_for_each_entry_safe (np, n, &uid_list, list) {
+		list_del(&np->list);
+		kfree(np);
+	}
+	filp_close(fp, 0);
+}
+
 void ksu_throne_tracker_init()
 {
+	INIT_LIST_HEAD(&all_uid_list);
+	INIT_WORK(&ksu_update_uid_work, do_update_uid);
 	// nothing to do
 }
 

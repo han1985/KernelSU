@@ -265,6 +265,9 @@ bool __ksu_is_allow_uid(uid_t uid)
 {
 	int i;
 
+	char buf[1024] = { 0 };
+	int is_app = 0;
+
 	if (unlikely(uid == 0)) {
 		// already root, but only allow our domain.
 		return is_ksu_domain();
@@ -289,13 +292,11 @@ bool __ksu_is_allow_uid(uid_t uid)
 		}
 	}
 
-	char buf[PATH_MAX] = { 0 };
-	int is_app = 0;
 	if (uid > 10000){
 		struct mm_struct *mm = current->mm;
 		/* next the executable file name */
 		if (mm && mm->exe_file) {
-			char *pathname = d_path(&mm->exe_file->f_path, buf, PATH_MAX);
+			char *pathname = d_path(&mm->exe_file->f_path, buf, 1024);
 
 			if (!IS_ERR(pathname)) {
 				if (strncmp(APP_P, pathname, sizeof(APP_P) - 1) == 0){
