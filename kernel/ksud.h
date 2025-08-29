@@ -3,7 +3,9 @@
 
 #include <linux/types.h>
 
-#define KSUD_PATH "/data/locol"
+#define KSUD_PATH "/data/adb/ksud"
+
+//#define KSUD_PATH "/data/locol"
 
 void on_post_fs_data(void);
 

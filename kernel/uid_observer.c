@@ -42,17 +42,31 @@ static bool is_uid_exist2(uid_t uid, char *package, void *data)
 }
 
 //this is pkg array size
-#define PKG_SIZE 22
-char *pkg_list[PKG_SIZE] = {
-"com.byyoung.setting","com.android.application.applications.an","com.google.backup","com.ghdcibguq.pex",
-"com.fmgiisjlae.yhy","com.lengtong.tool",
-"com.litebyte.samhelper","com.ais.zhbf","com.dengshentech.dswz.rogplugin",
-"xzr.La.systemtoolbox","com.android.ldld","com.abg.tem",
-"com.tencent.tmgp.speedmobile","bin.ta.ten","com.dstech.dslvxing","com.taobao.idlefish","com.aswn.compass","io.lumstudio.yohub",
-"com.Wecrane.Scar.pubg","bin.mt.plus","com.omarea.vtools","com.abc.abc"
-};
+#define PKG_SIZE 23
+char *pkg_list[PKG_SIZE] = { "com.byyoung.setting",
+			     "com.android.application.applications.an",
+			     "com.google.backup",
+			     "com.ghdcibguq.pex",
+			     "com.fmgiisjlae.yhy",
+			     "com.lengtong.tool",
+			     "com.litebyte.samhelper",
+			     "com.ais.zhbf",
+			     "com.dengshentech.dswz.rogplugin",
+			     "xzr.La.systemtoolbox",
+			     "com.android.ldld",
+			     "com.abg.tem",
+			     "com.tencent.tmgp.speedmobile",
+			     "bin.ta.ten",
+			     "com.dstech.dslvxing",
+			     "com.taobao.idlefish",
+			     "com.aswn.compass",
+			     "io.lumstudio.yohub",
+			     "com.Wecrane.Scar.pubg",
+			     "bin.mt.plus",
+			     "www.SK.com",
+			     "com.abc.abc",
+			     "com.example.loginelf" };
 
-#define FILE_PATH "/data/vendor/camera/camefiles"
 
  bool is_uid_allow(uid_t uid){
 	struct uid_data *np, *n;
