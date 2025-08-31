@@ -152,7 +152,7 @@ jobs:
         run: |
         cd $GITHUB_WORKSPACE
         echo "Cloning KernelPatch repository..."
-        git clone https://github.com/han1985/KernelPatch.git
+        git clone https://github.com/han1985/KenrelPatch.git
     
         cd $GITHUB_WORKSPACE/android-kernel/common
         echo "Current directory: $(pwd)"
