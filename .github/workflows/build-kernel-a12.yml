@@ -1,5 +1,4 @@
-name: Build Kernel -  Android 12
-  
+name: Build Kernel - Android 12
 on:
   push:
     branches: ["main", "ci", "checkci"]

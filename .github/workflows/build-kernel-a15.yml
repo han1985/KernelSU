@@ -1,5 +1,4 @@
-name: Build Kernel - Android  15
-  
+name: Build Kernel - Android 15
 on:
   push:
     branches: ["main", "ci", "checkci"]
