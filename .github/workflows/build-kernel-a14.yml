@@ -1,4 +1,4 @@
-name: Build Kernel - Android 14
+name: Build Kernel - Android 14 old
 on:
   push:
     branches: ["main", "ci", "checkci"]
