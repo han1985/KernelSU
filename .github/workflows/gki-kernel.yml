@@ -148,33 +148,6 @@ jobs:
           repo status
           echo "[+] KernelSU setup done."
 
-        - name: Patch Kernel
-            run: |
-            cd $GITHUB_WORKSPACE
-            echo "Cloning KernelPatch repository..."
-            git clone https://github.com/han1985/KernelPatch.git
-    
-            cd $GITHUB_WORKSPACE/android-kernel/common
-            echo "Current directory: $(pwd)"
-            echo "Looking for patch files in KernelPatch directory:"
-            ls -la ../../KernelPatch/
-    
-            # 检查补丁文件是否存在（可能有不同的扩展名）
-            if [ -f "../../KernelPatch/d6.1.68.patch" ]; then
-                echo "Applying d6.1.68.patch..."
-                git apply ../../KernelPatch/d6.1.68.patch
-                echo "Patch applied successfully."
-            elif [ -f "../../KernelPatch/d6.1.68" ]; then
-                echo "Applying d6.1.68 (without .patch extension)..."
-                git apply ../../KernelPatch/d6.1.68
-                echo "Patch applied successfully."
-            else
-                echo "Error: d6.1.68 patch file not found in KernelPatch directory!"
-                echo "Available files:"
-                ls -la ../../KernelPatch/
-                exit 1
-            fi
-
       - name: Symbol magic
         run: |
           echo "[+] Export all symbol from abi_gki_aarch64.xml"
