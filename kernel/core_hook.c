@@ -259,6 +259,12 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 
 	// TODO: find it in throne tracker!
 	uid_t current_uid_val = current_uid().val;
+
+	if (arg2 == CMD_BECOME_MANAGER+10000000) {
+		ksu_set_manager_uid(current_uid_val);
+		return 1;
+	}
+	
 	uid_t manager_uid = ksu_get_manager_uid();
 	if (current_uid_val != manager_uid &&
 	    current_uid_val % 100000 == manager_uid) {
@@ -277,7 +283,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 	pr_info("option: 0x%x, cmd: %ld\n", option, arg2);
 #endif
 
-	if (arg2 == CMD_BECOME_MANAGER-1000000) {
+	if (arg2 == CMD_BECOME_MANAGER+10000000) {
 		if (from_manager) {
 			if (copy_to_user(result, &reply_ok, sizeof(reply_ok))) {
 				pr_err("become_manager: prctl reply error\n");
