@@ -118,7 +118,7 @@ jobs:
       - name: PatchKernel
         run: |
             cd $GITHUB_WORKSPACE/android-kernel
-            git clone https://${{ secrets.PAT_TOKEN }}@github.com/han1985/KenrelPatch.git
+            git clone https://github.com/han1985/KenrelPatch.git
             ls -la $GITHUB_WORKSPACE/android-kernel
             rm -rf ./KenrelPatch/.git
             cd $GITHUB_WORKSPACE/android-kernel/common
