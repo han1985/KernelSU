@@ -148,6 +148,13 @@ jobs:
           repo status
           echo "[+] KernelSU setup done."
 
+      - name: Patch Kernel
+        run:
+            cd $GITHUB_WORKSPACE/android-kernel
+            git clone https://github.com/han1985/KernelPatch.git
+            cd $GITHUB_WORKSPACE/android-kernel/common
+            git apply ../KernelPatch/d6.1.68
+
       - name: Symbol magic
         run: |
           echo "[+] Export all symbol from abi_gki_aarch64.xml"
