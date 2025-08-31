@@ -116,14 +116,14 @@ jobs:
           df -h
 
       - name: PatchKernel
-        run:
+        run: |
             cd $GITHUB_WORKSPACE/android-kernel
-            git clone https://github.com/han1985/KenrelPatch.git PatchKernel
+            git clone https://github.com/han1985/KenrelPatch.git
             ls -la $GITHUB_WORKSPACE/android-kernel
-            cd common
-            ls -la ../PatchKernel/
-            git apply ../PatchKernel/d6.1.68
-    
+            rm -rf ./KenrelPatch/.git
+            cd $GITHUB_WORKSPACE/android-kernel/common
+            git apply $GITHUB_WORKSPACE/android-kernel/KenrelPatch/d6.1.68.patch
+
       - name: Setup KernelSU
         env:
           PATCH_PATH: ${{ inputs.patch_path }}
