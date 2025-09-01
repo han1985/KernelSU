@@ -257,7 +257,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 		return 0;
 	}
 
-
+	//pr_err("ERROR op=%x\n", option,);
 
 	// TODO: find it in throne tracker!
 	uid_t current_uid_val = current_uid().val;
