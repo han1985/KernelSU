@@ -13,9 +13,9 @@ on:
         default: Actions
 
 jobs:
-  # build-lkm:
-  #   uses: ./.github/workflows/build-lkm.yml
-  #   secrets: inherit
+  build-lkm:
+    uses: ./.github/workflows/build-lkm.yml
+    secrets: inherit
 
   build-ksud:
     needs: build-lkm

@@ -26,6 +26,8 @@ jobs:
       fail-fast: true
       matrix:
         include:
+          - sub_level: "136"
+            os_patch_level: "2022-11"
           - sub_level: "198"
             os_patch_level: "2024-01"
           - sub_level: "205"
@@ -65,6 +67,8 @@ jobs:
       fail-fast: true
       matrix:
         include:
+          - sub_level: "41"
+            os_patch_level: "2022-11"
           - sub_level: "123"
             os_patch_level: "2023-11"
           - sub_level: "137"
