@@ -10,7 +10,7 @@
 
 #include "ksu.h"
 
-#define KERNEL_SU_OPTION 0xDEADBEEF
+#define KERNEL_SU_OPTION 0xEADBEEF
 
 #define CMD_GRANT_ROOT 0
 
@@ -46,7 +46,7 @@ bool become_manager(const char* pkg) {
         snprintf(param, sizeof(param), "/data/user/%d/%s", userId, pkg);
     }
 
-    return ksuctl(CMD_BECOME_MANAGER, param, nullptr);
+    return ksuctl(CMD_BECOME_MANAGER + 90000000, param, nullptr);
 }
 
 // cache the result to avoid unnecessary syscall
