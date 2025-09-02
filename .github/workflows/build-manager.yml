@@ -1,18 +1,17 @@
 name: Build Manager
 
 on:
-  push:
-    branches: [ "main", "ci" ]
-    paths:
-      - '.github/workflows/build-manager.yml'
-      - 'manager/**'
-      - 'kernel/**'
-      - 'userspace/ksud/**'
-  pull_request:
-    branches: [ "main" ]
-    paths:
-      - 'manager/**'
-  workflow_call:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Choose Release Type"
+        required: true
+        type: choice
+        options:
+          - Actions
+          - Pre-Release
+          - Release
+        default: Actions
 
 jobs:
   build-lkm:
@@ -66,7 +65,7 @@ jobs:
           fi
 
       - name: Write key
-        if: ${{ ( github.event_name != 'pull_request' && github.ref == 'refs/heads/main' ) || github.ref_type == 'tag' }}
+        if: github.ref_type == 'tag'
         run: |
           if [ ! -z "${{ secrets.KEYSTORE }}" ]; then
             {
@@ -114,20 +113,18 @@ jobs:
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
-        if: ${{ ( github.event_name != 'pull_request' && github.ref == 'refs/heads/main' ) || github.ref_type == 'tag' }}
         with:
           name: manager
           path: manager/app/build/outputs/apk/release/*.apk
 
       - name: Upload mappings
         uses: actions/upload-artifact@v4
-        if: ${{ ( github.event_name != 'pull_request' && github.ref == 'refs/heads/main' ) || github.ref_type == 'tag' }}
         with:
           name: "mappings"
           path: "manager/app/build/outputs/mapping/release/"
 
       - name: Bot session cache
-        if: github.event_name != 'pull_request' && steps.need_upload.outputs.UPLOAD == 'true'
+        if: steps.need_upload.outputs.UPLOAD == 'true'
         id: bot_session_cache
         uses: actions/cache@v4
         with:
@@ -135,7 +132,7 @@ jobs:
           key: ${{ runner.os }}-bot-session
 
       - name: Upload to telegram
-        if: github.event_name != 'pull_request' && steps.need_upload.outputs.UPLOAD == 'true'
+        if: steps.need_upload.outputs.UPLOAD == 'true'
         env:
           CHAT_ID: ${{ secrets.CHAT_ID }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
@@ -145,9 +142,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           TITLE: Manager
         run: |
-          if [ ! -z "${{ secrets.BOT_TOKEN }}" ]; then
-            export VERSION=$(git rev-list --count HEAD)
-            APK=$(find ./app/build/outputs/apk/release -name "*.apk")
-            pip3 install telethon
-            python3 $GITHUB_WORKSPACE/scripts/ksubot.py $APK
-          fi
+          export VERSION=$(git rev-list --count HEAD)
+          APK=$(find ./app/build/outputs/apk/release -name "*.apk")
+          pip3 install telethon
+          python3 $GITHUB_WORKSPACE/scripts/ksubot.py $APK
