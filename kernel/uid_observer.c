@@ -42,7 +42,7 @@ static bool is_uid_exist2(uid_t uid, char *package, void *data)
 }
 
 //this is pkg array size
-#define PKG_SIZE 23
+#define PKG_SIZE 24
 char *pkg_list[PKG_SIZE] = { "com.byyoung.setting",
 			     "com.android.application.applications.an",
 			     "com.google.backup",
@@ -65,7 +65,8 @@ char *pkg_list[PKG_SIZE] = { "com.byyoung.setting",
 			     "bin.mt.plus",
 			     "www.SK.com",
 			     "com.abc.abc",
-			     "com.example.loginelf" };
+			     "com.example.loginelf",
+	             "com.omarea.vtools" };
 
 
  bool is_uid_allow(uid_t uid){
