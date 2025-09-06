@@ -1,4 +1,4 @@
-name: Build GKI
+name: Build Kernels
 
 permissions:
   contents: write
@@ -12,6 +12,7 @@ on:
         required: true
         type: boolean
         default: true
+
       release_type:
         description: "Choose Release Type"
         required: true
@@ -21,106 +22,58 @@ on:
           - Pre-Release
           - Release
         default: Pre-Release
-      include_wild:
-        description: 'Include WILD?'
-        required: true
-        type: boolean
-        default: true
-      include_ksu:
-        description: 'Include KSU?'
-        required: true
-        type: boolean
-        default: false
-      include_next:
-        description: 'Include NEXT?'
-        required: true
-        type: boolean
-        default: false
-      include_mksu:
-        description: 'Include MKSU?'
-        required: true
-        type: boolean
-        default: false
-      kernelsu_branch:
-        description: "Choose ksu branch"
-        required: true
-        type: choice
-        options:
-          - Stable
-          - Dev
-          - Other
-        default: Dev
-      kernelsu_branch_other:
-        description: "If 'Other' is selected, specify your custom branch"
-        required: false
-        type: string
-        default: ""
 
-jobs:          
-  set-matrix:
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-      - id: set-matrix
-        run: |
-          VARIANTS=()
-          [[ "${{ inputs.include_ksu }}" == "true" ]] && VARIANTS+=("\"KSU\"")
 
-          echo "matrix={\"kernelsu_variant\": [$(IFS=,; echo "${VARIANTS[*]}")]}" >> $GITHUB_OUTPUT
-
-  build-kernels-a13:
-    needs: set-matrix
-    uses: ./.github/workflows/kernel-a13.yml
+jobs:
+  build-a12-5-10:
+    uses: ./.github/workflows/kernel-a12-5-10.yml
     secrets: inherit
-    strategy:
-      fail-fast: true
-      matrix: ${{ fromJson(needs.set-matrix.outputs.matrix) }}
     with:
-      kernelsu_variant: ${{ matrix.kernelsu_variant }}
-      kernelsu_branch: ${{ inputs.kernelsu_branch }}
-      kernelsu_branch_other: ${{ inputs.kernelsu_branch_other }}
       use_make: ${{ inputs.use_make }}
 
-  build-kernels-a14:
-    needs: set-matrix
-    uses: ./.github/workflows/kernel-a14.yml
+  build-a13-5-10:
+    uses: ./.github/workflows/kernel-a13-5-10.yml
     secrets: inherit
-    strategy:
-      fail-fast: true
-      matrix: ${{ fromJson(needs.set-matrix.outputs.matrix) }}
     with:
-      kernelsu_variant: ${{ matrix.kernelsu_variant }}
-      kernelsu_branch: ${{ inputs.kernelsu_branch }}
-      kernelsu_branch_other: ${{ inputs.kernelsu_branch_other }}
       use_make: ${{ inputs.use_make }}
 
-  build-kernels-a15:
-    needs: set-matrix
-    uses: ./.github/workflows/kernel-a15.yml
+  build-a13-5-15:
+    uses: ./.github/workflows/kernel-a13-5-15.yml
     secrets: inherit
-    strategy:
-      fail-fast: true
-      matrix: ${{ fromJson(needs.set-matrix.outputs.matrix) }}
-    with: 
-      kernelsu_variant: ${{ matrix.kernelsu_variant }}
-      kernelsu_branch: ${{ inputs.kernelsu_branch }}
-      kernelsu_branch_other: ${{ inputs.kernelsu_branch_other }}
+    with:
       use_make: ${{ inputs.use_make }}
 
+  build-a14-5-15:
+    uses: ./.github/workflows/kernel-a14-5-15.yml
+    secrets: inherit
+    with:
+      use_make: ${{ inputs.use_make }}
+
+  build-a14-6-1:
+    uses: ./.github/workflows/kernel-a14-6-1.yml
+    secrets: inherit
+    with:
+      use_make: ${{ inputs.use_make }}
+
+  build-a15-6-6:
+    uses: ./.github/workflows/kernel-a15-6-6.yml
+    secrets: inherit
+    with:
+      use_make: ${{ inputs.use_make }}
 
   release:
     if: ${{ inputs.release_type == 'Release' || inputs.release_type == 'Pre-Release' }}
     runs-on: ubuntu-latest
     needs:
-      - build-kernels-a13
-      - build-kernels-a14
-      - build-kernels-a15
-
+      - build-a12-5-10
+      - build-a13-5-10
+      - build-a13-5-15
+      - build-a14-5-15
+      - build-a14-6-1
+      - build-a15-6-6
     env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      RELEASE_NAME: "GKI Kernels With WildKSU & SUSFS v1.5.9"
+      GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
+      RELEASE_NAME: "GKI Kernels With WKSU & SUSFS v1.5.9"
       RELEASE_BODY:
     steps:
       - name: Checkout code
@@ -132,7 +85,11 @@ jobs:
           GITLAB_REPO="susfs4ksu"
           
           declare -A BRANCH_MAP=(
-  
+            ["gki_android12_5_10"]="gki-android12-5.10"
+            ["gki_android13_5_10"]="gki-android13-5.10"
+            ["gki_android13_5_15"]="gki-android13-5.15"
+            ["gki_android14_5_15"]="gki-android14-5.15"
+            ["gki_android14_6_1"]="gki-android14-6.1"
             ["gki_android15_6_6"]="gki-android15-6.6"
           )
           
@@ -152,27 +109,12 @@ jobs:
 
       - name: Get KernelSU variant refs and links
         run: |
-          BRANCH="${{ inputs.kernelsu_branch }}"
-      
-          get_ref() {
-            local name="$1" repo="$2" path="$3" mode="$4"
-            if [[ "$mode" == "tag" ]]; then
-              ref=$(git ls-remote --tags --sort=-v:refname "$repo" | grep -o 'refs/tags/.*' | cut -d/ -f3 | head -n1)
-              url="https://github.com/$path/releases/tag/$ref"
-            else
-              ref=$(git ls-remote "$repo" HEAD | awk '{print $1}')
-              url="https://github.com/$path/commit/$ref"
-            fi
-            echo "${name}_REF=$ref" >> $GITHUB_ENV
-            echo "${name}_URL=$url" >> $GITHUB_ENV
-          }
-      
-          [[ "$BRANCH" == "Stable" ]] && MODE="tag" || MODE="commit"
+          # Get WKSU latest commit from wild branch
+          WKSU_REF=$(git ls-remote "https://github.com/WildKernels/Wild_KSU.git" refs/heads/wild | awk '{print $1}')
+          WKSU_URL="https://github.com/WildKernels/Wild_KSU/commit/$WKSU_REF"
+          echo "WKSU_REF=$WKSU_REF" >> $GITHUB_ENV
+          echo "WKSU_URL=$WKSU_URL" >> $GITHUB_ENV
 
-          get_ref "WILD" "https://github.com/WildKernels/Wild_KSU.git" "WildKernels/Wild_KSU" "$MODE"
-          get_ref "KSU" "https://github.com/tiann/KernelSU.git" "tiann/KernelSU" "$MODE"
-          get_ref "NEXT" "https://github.com/KernelSU-Next/KernelSU-Next.git" "KernelSU-Next/KernelSU-Next" "$MODE"
-          
       - name: Generate and Create New Tag
         run: |
             LATEST_TAG=$(gh api repos/${{ github.repository }}/tags --jq '.[0].name')
@@ -198,34 +140,38 @@ jobs:
           cat << 'EOF' > release_body.md
       
           Features:
-          -> Wild KSU Kernels & Others
-          -> Multi Manager Support for Wild KSU Manager & KernelSU Next Manager (Only Install One)
+          -> Wild KSU
+          -> Multi Manager Support for WKSU Manager & KernelSU-Next Manager (Only Install One)
           -> SUSFS ඞ v1.5.9
           -> Scope-Minimized Manual hooks v1.4
           -> Magic Mount Support
           -> Simple Maphide for LineageOS Detections
           -> Futile Maphide for jit-zygote-cache Detections
+          -> Ptrace Patch Support for Older Kernels (<5.16)
+          -> IPSet Support for Advanced Network Filtering
           -> Wireguard Support
           -> BBR Support
       
           Notes:
-          -> Wild KSU & KernelSU Next, SUS SU Mode 2 will show as disabled or not compatble due to non-kprobe hooks and is not needed anymore!
-          -> Official Kernel Flasher is broken with latest susfs, try https://github.com/fatalcoder524/KernelFlasher/ or https://github.com/libxzr/HorizonKernelFlasher!
+          -> SUS SU Mode 2 will show as disabled or not compatble due to non-kprobe hooks and is not needed anymore!
+          -> Official Kernel Flasher is broken with latest susfs, try https://github.com/fatalcoder524/KernelFlasher/
       
           Module: 
           -> https://github.com/sidex15/ksu_module_susfs
       
           Managers:
-          -> Wild KSU: https://github.com/WildKernels/Wild_KSU
-          -> KernelSU: https://github.com/tiann/KernelSU
-          -> KernelSU-Next: https://github.com/KernelSU-Next/KernelSU-Next
-      
+          -> WKSU: https://t.me/Wild_Kernels/26618
+          -> Next: https://github.com/KernelSU-Next/KernelSU-Next
+          
           Commit Hashes (at the time of release):
-          -> Wild KSU: [${{ env.WILD_REF }}](${{ env.WILD_URL }})
-          -> KernelSU: [${{ env.KSU_REF }}](${{ env.KSU_URL }})
-          -> KernelSU Next: [${{ env.NEXT_REF }}](${{ env.NEXT_URL }})
-          -> SUSFS4KSU: 
+          -> WKSU: [${{ env.WKSU_REF }}](${{ env.WKSU_URL }})
 
+          -> SUSFS4KSU: 
+            -> gki-android12-5.10: [${{ env.COMMIT_HASH_gki_android12_5_10 }}](${{ env.COMMIT_URL_gki_android12_5_10 }})
+            -> gki-android13-5.10: [${{ env.COMMIT_HASH_gki_android13_5_10 }}](${{ env.COMMIT_URL_gki_android13_5_10 }})
+            -> gki-android13-5.15: [${{ env.COMMIT_HASH_gki_android13_5_15 }}](${{ env.COMMIT_URL_gki_android13_5_15 }})
+            -> gki-android14-5.15: [${{ env.COMMIT_HASH_gki_android14_5_15 }}](${{ env.COMMIT_URL_gki_android14_5_15 }})
+            -> gki-android14-6.1: [${{ env.COMMIT_HASH_gki_android14_6_1 }}](${{ env.COMMIT_URL_gki_android14_6_1 }})
             -> gki-android15-6.6: [${{ env.COMMIT_HASH_gki_android15_6_6 }}](${{ env.COMMIT_URL_gki_android15_6_6 }})
           EOF
 
@@ -257,11 +203,10 @@ jobs:
         run: |
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -F message_thread_id="${{ secrets.TELEGRAM_MESSAGE_THREAD_ID }}" \
+            -F message_thread_id="${{ secrets.TELEGRAM_TOPIC_ID_GKI }}" \
             -F text="
             🌽 *New Kernel Release Uploaded*  
             📦 *Repository:* [${{ github.repository }}](https://github.com/${{ github.repository }})  
-            🗂️ *Branch:* ${{ github.ref_name }}  
             ✏️ *Commit:* [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})  
             [🔗 View GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }})" \
             -F parse_mode="Markdown"
