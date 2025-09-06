@@ -70,31 +70,31 @@ jobs:
 
           echo "matrix={\"kernelsu_variant\": [$(IFS=,; echo "${VARIANTS[*]}")]}" >> $GITHUB_OUTPUT
 
-  build-kernels-a13:
-    needs: set-matrix
-    uses: ./.github/workflows/kernel-a13.yml
-    secrets: inherit
-    strategy:
-      fail-fast: true
-      matrix: ${{ fromJson(needs.set-matrix.outputs.matrix) }}
-    with:
-      kernelsu_variant: ${{ matrix.kernelsu_variant }}
-      kernelsu_branch: ${{ inputs.kernelsu_branch }}
-      kernelsu_branch_other: ${{ inputs.kernelsu_branch_other }}
-      use_make: ${{ inputs.use_make }}
+  # build-kernels-a13:
+  #   needs: set-matrix
+  #   uses: ./.github/workflows/kernel-a13.yml
+  #   secrets: inherit
+  #   strategy:
+  #     fail-fast: true
+  #     matrix: ${{ fromJson(needs.set-matrix.outputs.matrix) }}
+  #   with:
+  #     kernelsu_variant: ${{ matrix.kernelsu_variant }}
+  #     kernelsu_branch: ${{ inputs.kernelsu_branch }}
+  #     kernelsu_branch_other: ${{ inputs.kernelsu_branch_other }}
+  #     use_make: ${{ inputs.use_make }}
 
-  build-kernels-a14:
-    needs: set-matrix
-    uses: ./.github/workflows/kernel-a14.yml
-    secrets: inherit
-    strategy:
-      fail-fast: true
-      matrix: ${{ fromJson(needs.set-matrix.outputs.matrix) }}
-    with:
-      kernelsu_variant: ${{ matrix.kernelsu_variant }}
-      kernelsu_branch: ${{ inputs.kernelsu_branch }}
-      kernelsu_branch_other: ${{ inputs.kernelsu_branch_other }}
-      use_make: ${{ inputs.use_make }}
+  # build-kernels-a14:
+  #   needs: set-matrix
+  #   uses: ./.github/workflows/kernel-a14.yml
+  #   secrets: inherit
+  #   strategy:
+  #     fail-fast: true
+  #     matrix: ${{ fromJson(needs.set-matrix.outputs.matrix) }}
+  #   with:
+  #     kernelsu_variant: ${{ matrix.kernelsu_variant }}
+  #     kernelsu_branch: ${{ inputs.kernelsu_branch }}
+  #     kernelsu_branch_other: ${{ inputs.kernelsu_branch_other }}
+  #     use_make: ${{ inputs.use_make }}
 
   build-kernels-a15:
     needs: set-matrix
