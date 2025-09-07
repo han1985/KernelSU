@@ -176,6 +176,9 @@ jobs:
         run: |
           echo "Changing to configuration directory: $CONFIG..."
           cd "$CONFIG"
+           echo "Now in directory: $(pwd)"
+           echo "Listing contents:"
+           ls -al
       
           case "${{ inputs.kernelsu_variant }}" in
             "WILD")
@@ -195,6 +198,9 @@ jobs:
               curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/main/kernel/setup.sh" | bash ${{ env.BRANCH }}
               ;;
           esac
+           echo "Now in directory: $(pwd)"
+           echo "Listing contents:"
+           ls -al
 
       - name: Apply Devices Config
         run: |
