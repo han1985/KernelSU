@@ -201,7 +201,7 @@ jobs:
             if [[ "${{ inputs.os_patch_level }}" == "2024-11" ]] && [ "${{ inputs.kernel_version }}" = "6.1" ]; then
                 cd "$CONFIG"
                 cd common
-                git apply ./KernelSU/KernelSU/kernel/d61112.patch
+                git apply ../../KernelSU/kernel/d61112.patch
             fi
              
           
