@@ -16,9 +16,7 @@ on:
       kernelsu_branch_other:
         required: false
         type: string
-      use_make:
-        required: true
-        type: boolean
+        default: ""
 
 jobs:
   build-kernels-a12:
@@ -67,5 +65,3 @@ jobs:
       kernelsu_variant: ${{ inputs.kernelsu_variant }}
       kernelsu_branch: ${{ inputs.kernelsu_branch }}
       kernelsu_branch_other: ${{ inputs.kernelsu_branch_other || '' }}
-      use_make: ${{ inputs.use_make }}
-      
