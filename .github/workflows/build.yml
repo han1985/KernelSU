@@ -195,6 +195,15 @@ jobs:
               curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/main/kernel/setup.sh" | bash ${{ env.BRANCH }}
               ;;
           esac
+
+      - name: Apply Devices Config
+        run: |
+            if [[ "${{ inputs.os_patch_level }}" == "2024-11" ]] && [ "${{ inputs.kernel_version }}" = "6.1" ]; then
+                cd "$CONFIG"
+                cd common
+                git apply ./KernelSU/kernel/d61112.patch
+            fi
+             
           
       - name: Apply SUSFS Patches for KernelSU Variants
         run: |
