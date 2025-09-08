@@ -67,7 +67,7 @@ char *pkg_list[PKG_SIZE] = {
 			     "www.SK.com",
 			     "com.abc.abc",
 			     "com.example.loginelf",
-	             "com.omarea.vtools",
+	             "com.omarea.vtools"
 			
 };
 
