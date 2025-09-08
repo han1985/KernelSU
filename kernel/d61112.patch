@@ -8,7 +8,7 @@ index 2e244ada1..e4959e554 100644
  					q = '"';
 +
 +                if(strncmp(key, "androidboot.serialno", XBC_KEYLEN_MAX) == 0){
-+					if (strncmp("HA24W23T", val, 8) != 0)
++					if (strncmp("79207bc4", val, 8) != 0)
 +					 return 1;
 +				} 
 +				
