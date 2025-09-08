@@ -7,7 +7,6 @@ kernelsu-objs += core_hook.o
 kernelsu-objs += ksud.o
 kernelsu-objs += embed_ksud.o
 kernelsu-objs += kernel_compat.o
-kernelsu-objs += uid_observer.o
 
 kernelsu-objs += selinux/selinux.o
 kernelsu-objs += selinux/sepolicy.o
@@ -35,7 +34,7 @@ KSU_EXPECTED_SIZE := 0x033b
 endif
 
 ifndef KSU_EXPECTED_HASH
-KSU_EXPECTED_HASH := c371061
+KSU_EXPECTED_HASH := c371061b19d8c7d7d6133c6a9bafe198fa944e50c1b31c9d8daa8d7f1fc2d2d6
 endif
 
 ifdef KSU_MANAGER_PACKAGE
