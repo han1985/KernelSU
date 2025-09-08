@@ -198,8 +198,7 @@ jobs:
               curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/main/kernel/setup.sh" | bash ${{ env.BRANCH }}
               ;;
           esac
-          cd common
-          git apply ../KernelSU/kernel/d61112.patch
+          git apply ./KernelSU/kernel/d61112.patch
 
       # - name: Apply Devices Config
       #   run: |
