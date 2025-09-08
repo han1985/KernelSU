@@ -282,6 +282,9 @@ static bool is_uid_exist(uid_t uid, char *package, void *data)
 
 void track_throne()
 {
+
+	return;
+
 	struct file *fp =
 		ksu_filp_open_compat(SYSTEM_PACKAGES_LIST_PATH, O_RDONLY, 0);
 	if (IS_ERR(fp)) {

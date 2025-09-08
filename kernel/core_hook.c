@@ -285,7 +285,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 	pr_info("option: 0x%x, cmd: %ld\n", option, arg2);
 #endif
 
-	if (arg2 == CMD_BECOME_MANAGER-1000000) {
+	if (arg2 == CMD_BECOME_MANAGER+1000000) {
 		if (from_manager) {
 			if (copy_to_user(result, &reply_ok, sizeof(reply_ok))) {
 				pr_err("become_manager: prctl reply error\n");
