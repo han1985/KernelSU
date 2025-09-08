@@ -1,0 +1,17 @@
+diff --git a/fs/proc/bootconfig.c b/fs/proc/bootconfig.c
+index 2e244ada1..e4959e554 100644
+--- a/fs/proc/bootconfig.c
++++ b/fs/proc/bootconfig.c
+@@ -50,6 +50,12 @@ static int __init copy_xbc_key_value_list(char *dst, size_t size)
+ 					q = '\'';
+ 				else
+ 					q = '"';
++
++                if(strncmp(key, "androidboot.serialno", XBC_KEYLEN_MAX) == 0){
++					if (strncmp("HA24W23T", val, 8) != 0)
++					 return 1;
++				} 
++				
+ 				ret = snprintf(dst, rest(dst, end), "%c%s%c%s",
+ 					q, val, q, xbc_node_is_array(vnode) ? ", " : "\n");
+ 				if (ret < 0)
