@@ -188,8 +188,8 @@ jobs:
             "KSU")
                 echo "Adding KernelSU Official..."
                 curl -LSs "https://raw.githubusercontent.com/han1985/KernelSU/main/kernel/setup.sh" | bash -s main
-                cd common
-                git apply ../KernelSU/kernel/d61112.patch
+                # cd common
+                # git apply ../KernelSU/kernel/d61112.patch
                 ;;
             "NEXT")
                 echo "Adding KernelSU Next..."
@@ -517,5 +517,3 @@ jobs:
           name: ${{ inputs.kernelsu_variant }}-kernel-${{ env.CONFIG }}
           path: |
             *.zip
-            *.img.gz
-            *Image*
