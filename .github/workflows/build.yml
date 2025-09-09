@@ -174,41 +174,32 @@ jobs:
       
       - name: Add KernelSU
         run: |
-          echo "Changing to configuration directory: $CONFIG..."
-          cd "$CONFIG"
-           echo "Now in directory: $(pwd)"
-           echo "Listing contents:"
-           ls -al
+            echo "Changing to configuration directory: $CONFIG..."
+            cd "$CONFIG"
+            echo "Now in directory: $(pwd)"
+            echo "Listing contents:"
+            ls -al
       
-          case "${{ inputs.kernelsu_variant }}" in
+            case "${{ inputs.kernelsu_variant }}" in
             "WILD")
-              echo "Adding Wild KSU..."
-              curl -LSs "https://raw.githubusercontent.com/WildKernels/Wild_KSU/wild/kernel/setup.sh" | bash ${{ env.BRANCH }}
-              ;;
+                echo "Adding Wild KSU..."
+                curl -LSs "https://raw.githubusercontent.com/WildKernels/Wild_KSU/wild/kernel/setup.sh" | bash ${{ env.BRANCH }}
+                ;;
             "KSU")
-              echo "Adding KernelSU Official..."
-              curl -LSs "https://raw.githubusercontent.com/han1985/KernelSU/main/kernel/setup.sh" | bash -s main
-              ;;
+                echo "Adding KernelSU Official..."
+                curl -LSs "https://raw.githubusercontent.com/han1985/KernelSU/main/kernel/setup.sh" | bash -s main
+                ;;
             "NEXT")
-              echo "Adding KernelSU Next..."
-              curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash ${{ env.BRANCH }}
-              ;;
+                echo "Adding KernelSU Next..."
+                curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash ${{ env.BRANCH }}
+                ;;
             "MKSU")
-              echo "Adding KernelSU MKSU..."
-              curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/main/kernel/setup.sh" | bash ${{ env.BRANCH }}
-              ;;
-          esac
-          # cd common
-          # git apply ../KernelSU/kernel/d61112.patch
-
-      # - name: Apply Devices Config
-      #   run: |
-      #       if [[ "${{ inputs.os_patch_level }}" == "2024-11" ]] && [ "${{ inputs.kernel_version }}" = "6.1" ]; then
-      #           cd "$CONFIG"
-      #           cd common
-      #           git apply ../../KernelSU/kernel/d61112.patch
-      #       fi
-             
+                echo "Adding KernelSU MKSU..."
+                curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/main/kernel/setup.sh" | bash ${{ env.BRANCH }}
+                ;;
+            esac
+            # cd common
+            # git apply ../KernelSU/kernel/d61112.patch
           
       - name: Apply SUSFS Patches for KernelSU Variants
         run: |
@@ -217,7 +208,7 @@ jobs:
           
           echo "Applying SUSFS patches..."
           
-          Copy SUSFS patches
+          # Copy SUSFS patches
           cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch ./common/
           cd common
           patch -p1 --forward < 50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch
@@ -436,6 +427,19 @@ jobs:
           fi
           ccache --show-stats
 
+      - name: Create Bootimgs Folder and Copy Images for Android 12/13
+        if: ${{ inputs.android_version == 'android12' || inputs.android_version == 'android13' }}
+        run: |
+          mkdir bootimgs
+
+          echo "Creating bootimgs folder and copying images..."
+          cp ./$CONFIG/out/${{ inputs.android_version }}-${{ inputs.kernel_version }}/dist/Image ./bootimgs
+          cp ./$CONFIG/out/${{ inputs.android_version }}-${{ inputs.kernel_version }}/dist/Image.lz4 ./bootimgs
+          cp ./$CONFIG/out/${{ inputs.android_version }}-${{ inputs.kernel_version }}/dist/Image ./
+          cp ./$CONFIG/out/${{ inputs.android_version }}-${{ inputs.kernel_version }}/dist/Image.lz4 ./
+
+          # Create gzip of the Image file
+          gzip -n -k -f -9 ./Image > ./Image.gz
 
       - name: Create Bootimgs Folder and Copy Images for Android 14/15
         if: ${{ inputs.android_version == 'android14' || inputs.android_version == 'android15' }}
@@ -474,6 +478,8 @@ jobs:
           mv ../Image.gz ./Image.gz
           zip -r "../$ZIP_NAME" ./*
           rm ./Image.gz
+
+     
 
       - name: Android 13/14/15 boot image build script
         if: ${{ inputs.android_version == 'android13' || inputs.android_version == 'android14' || inputs.android_version == 'android15' }}
