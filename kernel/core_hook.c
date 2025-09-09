@@ -1,4 +1,3 @@
-
 #include <linux/capability.h>
 #include <linux/cred.h>
 #include <linux/dcache.h>
@@ -63,7 +62,7 @@ static inline bool is_allow_su()
 	return ksu_is_allow_uid(current_uid().val);
 }
 
-static inline bool is_unsupported_uid(uid_t uid)
+static inline bool is_unsupported_app_uid(uid_t uid)
 {
 #define LAST_APPLICATION_UID 19999
 	uid_t appid = uid % 100000;
@@ -109,6 +108,7 @@ static void setup_groups(struct root_profile *profile, struct cred *cred)
 
 	groups_sort(group_info);
 	set_groups(cred, group_info);
+	put_group_info(group_info);
 }
 
 static void disable_seccomp()
@@ -125,6 +125,7 @@ static void disable_seccomp()
 #ifdef CONFIG_SECCOMP
 	current->seccomp.mode = 0;
 	current->seccomp.filter = NULL;
+	atomic_set(&current->seccomp.filter_count, 0);
 #else
 #endif
 }
@@ -133,18 +134,18 @@ void escape_to_root(void)
 {
 	struct cred *cred;
 
-	rcu_read_lock();
-
-	do {
-		cred = (struct cred *)__task_cred((current));
-		BUG_ON(!cred);
-	} while (!get_cred_rcu(cred));
+	cred = prepare_creds();
+	if (!cred) {
+		pr_warn("prepare_creds failed!\n");
+		return;
+	}
 
 	if (cred->euid.val == 0) {
 		pr_warn("Already root, don't escape!\n");
-		rcu_read_unlock();
+		abort_creds(cred);
 		return;
 	}
+
 	struct root_profile *profile = ksu_get_root_profile(cred->uid.val);
 
 	cred->uid.val = profile->uid;
@@ -175,7 +176,7 @@ void escape_to_root(void)
 
 	setup_groups(profile, cred);
 
-	rcu_read_unlock();
+	commit_creds(cred);
 
 	// Refer to kernel/seccomp.c: seccomp_set_mode_strict
 	// When disabling Seccomp, ensure that current->sighand->siglock is held during the operation.
@@ -225,8 +226,7 @@ int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
 	return 0;
 }
 
-static void nuke_ext4_sysfs()
-{
+static void nuke_ext4_sysfs() {
 	struct path path;
 	int err = kern_path("/data/adb/modules", 0, &path);
 	if (err) {
@@ -234,8 +234,8 @@ static void nuke_ext4_sysfs()
 		return;
 	}
 
-	struct super_block *sb = path.dentry->d_inode->i_sb;
-	const char *name = sb->s_type->name;
+	struct super_block* sb = path.dentry->d_inode->i_sb;
+	const char* name = sb->s_type->name;
 	if (strcmp(name, "ext4") != 0) {
 		pr_info("nuke but module aren't mounted\n");
 		path_put(&path);
@@ -414,6 +414,17 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 		return 0;
 	}
 
+	if (arg2 == CMD_GET_MANAGER_UID) {
+		uid_t manager_uid = ksu_get_manager_uid();
+		if (copy_to_user(arg3, &manager_uid, sizeof(manager_uid))) {
+			pr_err("get manager uid failed\n");
+		}
+		if (copy_to_user(result, &reply_ok, sizeof(reply_ok))) {
+			pr_err("prctl reply error, cmd: %lu\n", arg2);
+		}
+		return 0;
+	}
+
 	// all other cmds are for 'root manager'
 	if (!from_manager) {
 		return 0;
@@ -472,9 +483,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 		bool enabled = (arg3 != 0);
 		if (enabled == ksu_su_compat_enabled) {
 			pr_info("cmd enable su but no need to change.\n");
-			if (copy_to_user(
-				    result, &reply_ok,
-				    sizeof(reply_ok))) { // return the reply_ok directly
+			if (copy_to_user(result, &reply_ok, sizeof(reply_ok))) {// return the reply_ok directly
 				pr_err("prctl reply error, cmd: %lu\n", arg2);
 			}
 			return 0;
@@ -497,14 +506,13 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 	return 0;
 }
 
-static bool is_appuid(kuid_t uid)
+static bool is_non_appuid(kuid_t uid)
 {
 #define PER_USER_RANGE 100000
 #define FIRST_APPLICATION_UID 10000
-#define LAST_APPLICATION_UID 19999
 
 	uid_t appid = uid.val % PER_USER_RANGE;
-	return appid >= FIRST_APPLICATION_UID && appid <= LAST_APPLICATION_UID;
+	return appid < FIRST_APPLICATION_UID;
 }
 
 static bool should_umount(struct path *path)
@@ -544,11 +552,13 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
 
 	if (path.dentry != path.mnt->mnt_root) {
 		// it is not root mountpoint, maybe umounted by others already.
+		path_put(&path);
 		return;
 	}
 
 	// we are only interest in some specific mounts
 	if (check_mnt && !should_umount(&path)) {
+		path_put(&path);
 		return;
 	}
 
@@ -574,13 +584,25 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 		return 0;
 	}
 
-	if (!is_appuid(new_uid) || is_unsupported_uid(new_uid.val)) {
-		// pr_info("handle setuid ignore non application or isolated uid: %d\n", new_uid.val);
+	if (is_non_appuid(new_uid)) {
+#ifdef CONFIG_KSU_DEBUG
+		pr_info("handle setuid ignore non application uid: %d\n", new_uid.val);
+#endif
 		return 0;
 	}
 
+	// isolated process may be directly forked from zygote, always unmount
+	if (is_unsupported_app_uid(new_uid.val)) {
+#ifdef CONFIG_KSU_DEBUG
+		pr_info("handle umount for unsupported application uid: %d\n", new_uid.val);
+#endif
+		goto do_umount;
+	}
+
 	if (ksu_is_allow_uid(new_uid.val)) {
-		// pr_info("handle setuid ignore allowed application: %d\n", new_uid.val);
+#ifdef CONFIG_KSU_DEBUG
+		pr_info("handle setuid ignore allowed application: %d\n", new_uid.val);
+#endif
 		return 0;
 	}
 
@@ -592,11 +614,11 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 #endif
 	}
 
+do_umount:
 	// check old process's selinux context, if it is not zygote, ignore it!
 	// because some su apps may setuid to untrusted_app but they are in global mount namespace
 	// when we umount for such process, that is a disaster!
-	bool is_zygote_child = is_zygote(old->security);
-	if (!is_zygote_child) {
+	if (!is_zygote(old->security)) {
 		pr_info("handle umount ignore non zygote child: %d\n",
 			current->pid);
 		return 0;
@@ -609,6 +631,7 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 
 	// fixme: use `collect_mounts` and `iterate_mount` to iterate all mountpoint and
 	// filter the mountpoint whose target is `/data/adb`
+	try_umount("/odm", true, 0);
 	try_umount("/system", true, 0);
 	try_umount("/vendor", true, 0);
 	try_umount("/product", true, 0);
