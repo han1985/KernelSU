@@ -188,6 +188,8 @@ jobs:
             "KSU")
                 echo "Adding KernelSU Official..."
                 curl -LSs "https://raw.githubusercontent.com/han1985/KernelSU/main/kernel/setup.sh" | bash -s main
+                cd common
+                git apply ../KernelSU/kernel/d61112.patch
                 ;;
             "NEXT")
                 echo "Adding KernelSU Next..."
@@ -198,8 +200,7 @@ jobs:
                 curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/main/kernel/setup.sh" | bash ${{ env.BRANCH }}
                 ;;
             esac
-            # cd common
-            # git apply ../KernelSU/kernel/d61112.patch
+          
           
       - name: Apply SUSFS Patches for KernelSU Variants
         run: |
