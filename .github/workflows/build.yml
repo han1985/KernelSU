@@ -187,7 +187,7 @@ jobs:
               ;;
             "KSU")
               echo "Adding KernelSU Official..."
-              curl -LSs "https://raw.githubusercontent.com/han1985/tiann/main/kernel/setup.sh" | bash -s main
+              curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
               ;;
             "NEXT")
               echo "Adding KernelSU Next..."
