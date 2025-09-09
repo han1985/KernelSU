@@ -187,7 +187,7 @@ jobs:
               ;;
             "KSU")
               echo "Adding KernelSU Official..."
-              curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash ${{ env.BRANCH }}
+              curl -LSs "https://raw.githubusercontent.com/han1985/KernelSU/main/kernel/setup.sh" | bash -s main
               ;;
             "NEXT")
               echo "Adding KernelSU Next..."
@@ -197,9 +197,9 @@ jobs:
               echo "Adding KernelSU MKSU..."
               curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/main/kernel/setup.sh" | bash ${{ env.BRANCH }}
               ;;
-          # esac
-          # cd common
-          # git apply ../KernelSU/kernel/d61112.patch
+          esac
+          cd common
+          git apply ../KernelSU/kernel/d61112.patch
 
       # - name: Apply Devices Config
       #   run: |
