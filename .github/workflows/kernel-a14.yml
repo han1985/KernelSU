@@ -18,7 +18,7 @@ on:
         type: string
         default: ""
 
-# jobs:
+jobs:
 #   build-kernels-a14-5-15:
 #     strategy:
 #       fail-fast: true
