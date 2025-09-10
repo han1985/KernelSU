@@ -64,23 +64,23 @@ jobs:
 
           echo "CONFIG set to: $CONFIG"
 
-      - name: Install ccache
-        run: sudo apt update && sudo apt install -y ccache
+      # - name: Install ccache
+      #   run: sudo apt update && sudo apt install -y ccache
 
-      - name: Set up ccache
-        run: |
-          mkdir -p ~/.cache/bazel
-          ccache --version
-          ccache --max-size=2G
-          ccache --set-config=compression=true
-          echo "CCACHE_DIR=$HOME/.ccache" >> $GITHUB_ENV
+      # - name: Set up ccache
+      #   run: |
+      #     mkdir -p ~/.cache/bazel
+      #     ccache --version
+      #     ccache --max-size=2G
+      #     ccache --set-config=compression=true
+      #     echo "CCACHE_DIR=$HOME/.ccache" >> $GITHUB_ENV
 
-      - name: Download toolchain
-        run: |
-          AOSP_MIRROR=https://android.googlesource.com
-          BRANCH=main-kernel-build-2024
-          git clone $AOSP_MIRROR/kernel/prebuilts/build-tools -b $BRANCH --depth 1 kernel-build-tools
-          git clone $AOSP_MIRROR/platform/system/tools/mkbootimg -b $BRANCH --depth 1 mkbootimg
+      # - name: Download toolchain
+      #   run: |
+      #     AOSP_MIRROR=https://android.googlesource.com
+      #     BRANCH=main-kernel-build-2024
+      #     git clone $AOSP_MIRROR/kernel/prebuilts/build-tools -b $BRANCH --depth 1 kernel-build-tools
+      #     git clone $AOSP_MIRROR/platform/system/tools/mkbootimg -b $BRANCH --depth 1 mkbootimg
 
       - name: Set environment variables
         run: |
