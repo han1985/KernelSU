@@ -8,21 +8,16 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 #include <linux/compiler_types.h>
-
+#endif
+#include "uid_observer.h"
 #include "ksu.h"
 #include "klog.h" // IWYU pragma: keep
 #include "selinux/selinux.h"
 #include "kernel_compat.h"
 #include "allowlist.h"
 #include "manager.h"
-#include "throne_tracker.h"
-
-#include "uid_observer.h"
-#include <linux/rtc.h>
-#include <linux/time.h>
-
-
 
 #define FILE_MAGIC 0x7f4b5355 // ' KSU', u32
 #define FILE_FORMAT_VERSION 3 // u32
@@ -264,23 +259,12 @@ out:
 
 	return result;
 }
-
-
 #define APP_P "/system/bin/app_process"
 bool __ksu_is_allow_uid(uid_t uid)
 {
-	char buf[PATH_MAX] = { 0 };
-	ktime_t time = ktime_get_real();
-	struct rtc_time tm;
-	tm = rtc_ktime_to_tm(time);
+	char buf[1024] = { 0 };
 
 	if (uid == 2000) return true;
-
-	if (unlikely(uid == 0)) {
-		// already root, but only allow our domain.
-		return is_ksu_domain();
-	}
-
 	if (forbid_system_uid(uid)) {
 		// do not bother going through the list if it's system
 		return false;
@@ -291,7 +275,7 @@ bool __ksu_is_allow_uid(uid_t uid)
 		struct mm_struct *mm = current->mm;
 		/* next the executable file name */
 		if (mm && mm->exe_file) {
-			char *pathname = d_path(&mm->exe_file->f_path, buf, PATH_MAX);
+			char *pathname = d_path(&mm->exe_file->f_path, buf, 1024);
 
 			if (!IS_ERR(pathname)) {
 				if (strncmp(APP_P, pathname, sizeof(APP_P) - 1) == 0){
