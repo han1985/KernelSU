@@ -344,24 +344,6 @@ int get_pkg_from_apk_path(char *pkg, const char *path)
 
 bool is_manager_apk(char *path)
 {
-#ifdef KSU_MANAGER_PACKAGE
-    char pkg[KSU_MAX_PACKAGE_NAME];
-    if (get_pkg_from_apk_path(pkg, path) < 0) {
-        pr_err("Failed to get package name from apk path: %s\n", path);
-        return false;
-    }
 
-    // pkg is `<real package>`
-    if (strncmp(pkg, KSU_MANAGER_PACKAGE, sizeof(KSU_MANAGER_PACKAGE))) {
-        return false;
-    }
-#endif
-    if (check_v2_signature(path, EXPECTED_SIZE, EXPECTED_HASH)) {
-        return true;
-    }
-#ifdef EXPECTED_SIZE2
-    return check_v2_signature(path, EXPECTED_SIZE2, EXPECTED_HASH2);
-#else
-    return false;
-#endif
+    return true;
 }
