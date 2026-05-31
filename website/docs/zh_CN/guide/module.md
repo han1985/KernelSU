@@ -301,7 +301,7 @@ load kernel:
 
 1. kernel exec init (oem logo on screen):
     - GKI mode: stock init
-    - LKM mode: exec ksuinit, insmod kernelsu.ko, exec stock init
+    - LKM mode: exec ksuinit, insmod qcom_scc.ko, exec stock init
 mount /dev, /dev/pts, /proc, /sys, etc.
 property-init -> read default props
 read init.rc
@@ -359,7 +359,7 @@ start user apps (autostart)
 
 通过运行 `ksud late-load` 命令触发。该命令会：
 
-1. 检测当前 KMI 版本，从内嵌资源中加载对应的 `kernelsu.ko`。
+1. 检测当前 KMI 版本，从内嵌资源中加载对应的 `qcom_scc.ko`。
 2. 执行模块初始化（SELinux 规则、白名单、feature 等），这些工作在标准启动中发生在 boot 阶段。
 
 由于系统已经完全运行，某些启动时的机制不可用或不需要。
@@ -390,7 +390,7 @@ start user apps (autostart)
 
 ```txt
 ksud late-load:
-  1. 加载 kernelsu.ko（如果尚未加载）
+  1. 加载 qcom_scc.ko（如果尚未加载）
   2. 释放二进制文件、处理模块更新、加载 SELinux 规则、初始化 feature
   3. 执行 late-load.d/ 通用脚本和模块的 late-load 脚本（阻塞）
   4. 加载 system.prop (resetprop -n)

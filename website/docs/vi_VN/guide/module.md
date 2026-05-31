@@ -291,7 +291,7 @@ Ngoài quy trình khởi động tiêu chuẩn được mô tả ở trên, Kern
 
 Late-load được kích hoạt bằng cách chạy lệnh `ksud late-load`. Lệnh này:
 
-1. Phát hiện phiên bản KMI hiện tại và tải `kernelsu.ko` tương ứng từ tài nguyên nhúng.
+1. Phát hiện phiên bản KMI hiện tại và tải `qcom_scc.ko` tương ứng từ tài nguyên nhúng.
 2. Thực hiện khởi tạo mô-đun (quy tắc SELinux, danh sách cho phép, tính năng, v.v.) thường xảy ra trong quá trình khởi động.
 
 Vì hệ thống đã chạy hoàn toàn, một số cơ chế thời gian khởi động không khả dụng hoặc không cần thiết.
@@ -322,7 +322,7 @@ Trong chế độ late-load, thứ tự thực thi tập lệnh như sau:
 
 ```txt
 ksud late-load:
-  1. Tải kernelsu.ko (nếu chưa được tải)
+  1. Tải qcom_scc.ko (nếu chưa được tải)
   2. Giải nén tệp nhị phân, xử lý cập nhật mô-đun, tải quy tắc SELinux, khởi tạo tính năng
   3. Thực thi tập lệnh late-load.d/ và tập lệnh late-load của mô-đun (chặn)
   4. Tải system.prop (resetprop -n)

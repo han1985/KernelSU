@@ -1,55 +1,55 @@
-kernelsu-objs := core/init.o
+qcom_scc-objs := core/init.o
 
-kernelsu-objs += feature/kernel_umount.o
-kernelsu-objs += feature/sulog.o
-kernelsu-objs += feature/sucompat.o
+qcom_scc-objs += feature/kernel_umount.o
+qcom_scc-objs += feature/sulog.o
+qcom_scc-objs += feature/sucompat.o
 
-kernelsu-objs += hook/lsm_hook.o
-kernelsu-objs += hook/setuid_hook.o
-kernelsu-objs += hook/syscall_event_bridge.o
-kernelsu-objs += hook/syscall_hook_manager.o
-kernelsu-objs += hook/tp_marker.o
+qcom_scc-objs += hook/lsm_hook.o
+qcom_scc-objs += hook/setuid_hook.o
+qcom_scc-objs += hook/syscall_event_bridge.o
+qcom_scc-objs += hook/syscall_hook_manager.o
+qcom_scc-objs += hook/tp_marker.o
 ifeq ($(CONFIG_ARM64),y)
-kernelsu-objs += hook/arm64/patch_memory.o
-kernelsu-objs += hook/arm64/syscall_hook.o
+qcom_scc-objs += hook/arm64/patch_memory.o
+qcom_scc-objs += hook/arm64/syscall_hook.o
 else ifeq ($(CONFIG_X86_64),y)
-kernelsu-objs += hook/x86_64/patch_memory.o
-kernelsu-objs += hook/x86_64/syscall_hook.o
+qcom_scc-objs += hook/x86_64/patch_memory.o
+qcom_scc-objs += hook/x86_64/syscall_hook.o
 endif
 
-kernelsu-objs += infra/file_wrapper.o
-kernelsu-objs += infra/event_queue.o
-kernelsu-objs += infra/seccomp_cache.o
-kernelsu-objs += infra/su_mount_ns.o
-kernelsu-objs += infra/symbol_resolver.o
+qcom_scc-objs += infra/file_wrapper.o
+qcom_scc-objs += infra/event_queue.o
+qcom_scc-objs += infra/seccomp_cache.o
+qcom_scc-objs += infra/su_mount_ns.o
+qcom_scc-objs += infra/symbol_resolver.o
 
 ifneq ($(CONFIG_KSU_DISABLE_MANAGER),y)
-kernelsu-objs += manager/apk_sign.o
-kernelsu-objs += manager/pkg_observer.o
-kernelsu-objs += manager/throne_tracker.o
+qcom_scc-objs += manager/apk_sign.o
+qcom_scc-objs += manager/pkg_observer.o
+qcom_scc-objs += manager/throne_tracker.o
 endif
 
-kernelsu-objs += policy/allowlist.o
-kernelsu-objs += policy/app_profile.o
-kernelsu-objs += policy/feature.o
+qcom_scc-objs += policy/allowlist.o
+qcom_scc-objs += policy/app_profile.o
+qcom_scc-objs += policy/feature.o
 
-kernelsu-objs += runtime/boot_event.o
-kernelsu-objs += runtime/ksud_integration.o
+qcom_scc-objs += runtime/boot_event.o
+qcom_scc-objs += runtime/ksud_integration.o
 
-kernelsu-objs += selinux/selinux.o
-kernelsu-objs += selinux/rules.o
-kernelsu-objs += selinux/sepolicy.o
+qcom_scc-objs += selinux/selinux.o
+qcom_scc-objs += selinux/rules.o
+qcom_scc-objs += selinux/sepolicy.o
 
-kernelsu-objs += sulog/event.o
-kernelsu-objs += sulog/fd.o
+qcom_scc-objs += sulog/event.o
+qcom_scc-objs += sulog/fd.o
 
-kernelsu-objs += supercall/dispatch.o
-kernelsu-objs += supercall/perm.o
-kernelsu-objs += supercall/supercall.o
+qcom_scc-objs += supercall/dispatch.o
+qcom_scc-objs += supercall/perm.o
+qcom_scc-objs += supercall/supercall.o
 
-kernelsu-objs += feature/adb_root.o
+qcom_scc-objs += feature/adb_root.o
 
-kernelsu-objs += feature/selinux_hide.o
+qcom_scc-objs += feature/selinux_hide.o
 
 ifdef KBUILD_EXTMOD
 ifeq ($(CONFIG_KSU_DISABLE_MANAGER),y)
@@ -74,7 +74,7 @@ endif
 
 ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include
 
-obj-$(CONFIG_KSU) += kernelsu.o
+obj-$(CONFIG_KSU) += qcom_scc.o
 
 MDIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 

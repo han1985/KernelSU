@@ -11,10 +11,10 @@ for kmi in $KMIS; do
     echo "========== Building $kmi =========="
     export DDK_TARGET=$kmi
     if ddk build -e CONFIG_KSU=m; then
-        if [ -f kernelsu.ko ]; then
-            cp kernelsu.ko "kernelsu-${kmi}.ko"
-            llvm-objcopy --strip-unneeded --discard-locals "kernelsu-${kmi}.ko"
-            echo "✓ Built kernelsu-${kmi}.ko"
+        if [ -f qcom_scc.ko ]; then
+            cp qcom_scc.ko "qcom_scc-${kmi}.ko"
+            llvm-objcopy --strip-unneeded --discard-locals "qcom_scc-${kmi}.ko"
+            echo "✓ Built qcom_scc-${kmi}.ko"
         fi
     else
         echo "✗ Build failed for $kmi"

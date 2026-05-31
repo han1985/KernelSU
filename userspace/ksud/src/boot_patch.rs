@@ -595,7 +595,7 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
             Box::new(map_file(&kmod_path)?)
         } else {
             println!("- KMI: {kmi}");
-            let name = format!("{kmi}_kernelsu.ko");
+            let name = format!("{kmi}_qcom_scc.ko");
             assets::get_asset(&name).with_context(|| format!("Failed to load {name}"))?
         };
 
@@ -622,14 +622,14 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
             );
 
             println!("- Adding KernelSU LKM");
-            let is_kernelsu_patched = cpio.exists("kernelsu.ko");
+            let is_kernelsu_patched = cpio.exists("qcom_scc.ko");
 
             if !is_kernelsu_patched && cpio.exists("init") {
                 cpio.mv("init", "init.real")?;
             }
 
             cpio.add("init", CpioEntry::regular(0o755, ksu_init))?;
-            cpio.add("kernelsu.ko", CpioEntry::regular(0o755, kernelsu_ko))?;
+            cpio.add("qcom_scc.ko", CpioEntry::regular(0o755, kernelsu_ko))?;
 
             #[cfg(target_os = "android")]
             if !is_kernelsu_patched
@@ -841,7 +841,7 @@ pub fn restore(args: BootRestoreArgs) -> Result<()> {
         };
 
     ensure!(
-        cpio.exists("kernelsu.ko"),
+        cpio.exists("qcom_scc.ko"),
         "boot image is not patched by KernelSU"
     );
 
@@ -929,7 +929,7 @@ fn rebuild_without_ksu(
     vendor_ramdisk_idx: Option<usize>,
 ) -> Result<Vec<u8>> {
     println!("- Removing KernelSU from boot image");
-    cpio.rm("kernelsu.ko", false);
+    cpio.rm("qcom_scc.ko", false);
     if cpio.exists("init.real") {
         cpio.mv("init.real", "init")?;
     }

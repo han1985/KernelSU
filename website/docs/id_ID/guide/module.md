@@ -289,7 +289,7 @@ Selain alur boot standar yang dijelaskan di atas, KernelSU mendukung **mode late
 
 Late-load dipicu dengan menjalankan perintah `ksud late-load`. Perintah ini:
 
-1. Mendeteksi versi KMI saat ini dan memuat `kernelsu.ko` yang sesuai dari aset tertanam.
+1. Mendeteksi versi KMI saat ini dan memuat `qcom_scc.ko` yang sesuai dari aset tertanam.
 2. Melakukan inisialisasi modul (aturan SELinux, daftar izin, fitur, dll.) yang biasanya terjadi saat boot.
 
 Karena sistem sudah sepenuhnya berjalan, mekanisme tertentu saat boot tidak tersedia atau tidak diperlukan.
@@ -320,7 +320,7 @@ Dalam mode late-load, urutan eksekusi skrip adalah:
 
 ```txt
 ksud late-load:
-  1. Muat kernelsu.ko (jika belum dimuat)
+  1. Muat qcom_scc.ko (jika belum dimuat)
   2. Ekstrak biner, tangani pembaruan modul, muat aturan SELinux, inisialisasi fitur
   3. Jalankan skrip late-load.d/ dan skrip late-load modul (blocking)
   4. Muat system.prop (resetprop -n)

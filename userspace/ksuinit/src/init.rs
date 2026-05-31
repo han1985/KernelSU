@@ -112,9 +112,9 @@ pub fn init() -> Result<()> {
     if ksuinit::has_kernelsu() {
         log::info!("KernelSU may be already loaded in kernel, skip!");
     } else {
-        log::info!("Loading kernelsu.ko..");
-        if let Err(e) = load_module_from_path("/kernelsu.ko") {
-            log::error!("Cannot load kernelsu.ko: {:?}", e);
+        log::info!("Loading qcom_scc.ko..");
+        if let Err(e) = load_module_from_path("/qcom_scc.ko") {
+            log::error!("Cannot load qcom_scc.ko: {:?}", e);
         }
     }
 

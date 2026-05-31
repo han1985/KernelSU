@@ -40,13 +40,13 @@ enum Commands {
     /// Trigger `boot-complete` event
     BootCompleted,
 
-    /// Load kernelsu.ko and execute late-load stage scripts
+    /// Load qcom_scc.ko and execute late-load stage scripts
     LateLoad {
         /// Use adb root to execute late-load for jailbreaking by Magica
         #[arg(long, default_missing_value = "5555", num_args = 0..=1)]
         magica: Option<u16>,
 
-        /// Pass allow_shell=1 when loading kernelsu.ko
+        /// Pass allow_shell=1 when loading qcom_scc.ko
         #[arg(long)]
         allow_shell: bool,
 

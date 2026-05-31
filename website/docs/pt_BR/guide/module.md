@@ -294,7 +294,7 @@ load kernel:
 
 1. kernel exec init (logo OEM na tela):
     - Modo GKI: stock init
-    - Modo LKM: exec ksuinit, insmod kernelsu.ko, exec stock init
+    - Modo LKM: exec ksuinit, insmod qcom_scc.ko, exec stock init
 mount /dev, /dev/pts, /proc, /sys, etc.
 property-init -> read default props
 read init.rc
@@ -352,7 +352,7 @@ Além do fluxo de inicialização padrão descrito acima, o KernelSU suporta um 
 
 O late-load é acionado executando o comando `ksud late-load`. Este comando:
 
-1. Detecta a versão KMI atual e carrega o `kernelsu.ko` correspondente dos recursos incorporados.
+1. Detecta a versão KMI atual e carrega o `qcom_scc.ko` correspondente dos recursos incorporados.
 2. Realiza a inicialização do módulo (regras SELinux, lista de permissões, features, etc.) que normalmente aconteceria durante a inicialização.
 
 Como o sistema já está totalmente em execução, certos mecanismos de tempo de inicialização estão indisponíveis ou são desnecessários.
@@ -383,7 +383,7 @@ No modo late-load, a ordem de execução dos scripts é:
 
 ```txt
 ksud late-load:
-  1. Carregar kernelsu.ko (se ainda não carregado)
+  1. Carregar qcom_scc.ko (se ainda não carregado)
   2. Extrair binários, processar atualizações de módulos, carregar regras SELinux, inicializar features
   3. Executar scripts late-load.d/ e scripts late-load dos módulos (bloqueante)
   4. Carregar system.prop (resetprop -n)

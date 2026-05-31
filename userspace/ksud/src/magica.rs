@@ -145,7 +145,7 @@ pub fn run(port: u16, package_name: &String, allow_shell: bool) -> Result<()> {
 
     // Execute late-load with --post-magica via adb shell.
     // The late-load process has full root + su domain and will:
-    // 1. Load kernelsu.ko, enforce SELinux, run stage scripts
+    // 1. Load qcom_scc.ko, enforce SELinux, run stage scripts
     // 2. Restore adb properties (disable adb root/tcp mode)
     let allow_shell_arg = if allow_shell { " --allow-shell" } else { "" };
     let cmd = format!(
