@@ -139,29 +139,29 @@ static const __u8 KSU_UMOUNT_ADD = 1; /* add entry (path + flags) */
 static const __u8 KSU_UMOUNT_DEL = 2; /* delete entry, strcmp */
 
 /* IOCTL command definitions */
-static const __u32 KSU_IOCTL_GRANT_ROOT       = _IOC(_IOC_NONE, 'K', 1, 0);
-static const __u32 KSU_IOCTL_GET_INFO         = _IOC(_IOC_READ, 'K', 2, 0);
-static const __u32 KSU_IOCTL_REPORT_EVENT     = _IOC(_IOC_WRITE, 'K', 3, 0);
-static const __u32 KSU_IOCTL_SET_SEPOLICY     = _IOC(_IOC_READ | _IOC_WRITE, 'K', 4, 0);
-static const __u32 KSU_IOCTL_CHECK_SAFEMODE   = _IOC(_IOC_READ, 'K', 5, 0);
+static const __u32 KSU_IOCTL_GRANT_ROOT       = _IOC(_IOC_NONE, 'K', 101, 0);
+static const __u32 KSU_IOCTL_GET_INFO         = _IOC(_IOC_READ, 'K', 201, 0);
+static const __u32 KSU_IOCTL_REPORT_EVENT     = _IOC(_IOC_WRITE, 'K', 301, 0);
+static const __u32 KSU_IOCTL_SET_SEPOLICY     = _IOC(_IOC_READ | _IOC_WRITE, 'K', 401, 0);
+static const __u32 KSU_IOCTL_CHECK_SAFEMODE   = _IOC(_IOC_READ, 'K', 501, 0);
 /* deprecated */
-static const __u32 KSU_IOCTL_GET_ALLOW_LIST   = _IOC(_IOC_READ | _IOC_WRITE, 'K', 6, 0);
+static const __u32 KSU_IOCTL_GET_ALLOW_LIST   = _IOC(_IOC_READ | _IOC_WRITE, 'K', 601, 0);
 /* deprecated */
-static const __u32 KSU_IOCTL_GET_DENY_LIST      = _IOC(_IOC_READ | _IOC_WRITE, 'K', 7, 0);
+static const __u32 KSU_IOCTL_GET_DENY_LIST      = _IOC(_IOC_READ | _IOC_WRITE, 'K', 701, 0);
 static const __u32 KSU_IOCTL_NEW_GET_ALLOW_LIST = _IOWR('K', 6, struct ksu_new_get_allow_list_cmd);
 static const __u32 KSU_IOCTL_NEW_GET_DENY_LIST  = _IOWR('K', 7, struct ksu_new_get_allow_list_cmd);
-static const __u32 KSU_IOCTL_UID_GRANTED_ROOT   = _IOC(_IOC_READ | _IOC_WRITE, 'K', 8, 0);
-static const __u32 KSU_IOCTL_UID_SHOULD_UMOUNT  = _IOC(_IOC_READ | _IOC_WRITE, 'K', 9, 0);
-static const __u32 KSU_IOCTL_GET_MANAGER_APPID  = _IOC(_IOC_READ, 'K', 10, 0);
-static const __u32 KSU_IOCTL_GET_APP_PROFILE    = _IOC(_IOC_READ | _IOC_WRITE, 'K', 11, 0);
-static const __u32 KSU_IOCTL_SET_APP_PROFILE    = _IOC(_IOC_WRITE, 'K', 12, 0);
-static const __u32 KSU_IOCTL_GET_FEATURE        = _IOC(_IOC_READ | _IOC_WRITE, 'K', 13, 0);
-static const __u32 KSU_IOCTL_SET_FEATURE        = _IOC(_IOC_WRITE, 'K', 14, 0);
-static const __u32 KSU_IOCTL_GET_WRAPPER_FD     = _IOC(_IOC_WRITE, 'K', 15, 0);
-static const __u32 KSU_IOCTL_MANAGE_MARK        = _IOC(_IOC_READ | _IOC_WRITE, 'K', 16, 0);
-static const __u32 KSU_IOCTL_NUKE_EXT4_SYSFS    = _IOC(_IOC_WRITE, 'K', 17, 0);
-static const __u32 KSU_IOCTL_ADD_TRY_UMOUNT     = _IOC(_IOC_WRITE, 'K', 18, 0);
-static const __u32 KSU_IOCTL_SET_INIT_PGRP      = _IO('K', 19);
-static const __u32 KSU_IOCTL_GET_SULOG_FD       = _IOW('K', 20, struct ksu_get_sulog_fd_cmd);
+static const __u32 KSU_IOCTL_UID_GRANTED_ROOT   = _IOC(_IOC_READ | _IOC_WRITE, 'K', 801, 0);
+static const __u32 KSU_IOCTL_UID_SHOULD_UMOUNT  = _IOC(_IOC_READ | _IOC_WRITE, 'K', 901, 0);
+static const __u32 KSU_IOCTL_GET_MANAGER_APPID  = _IOC(_IOC_READ, 'K', 1001, 0);
+static const __u32 KSU_IOCTL_GET_APP_PROFILE    = _IOC(_IOC_READ | _IOC_WRITE, 'K', 1101, 0);
+static const __u32 KSU_IOCTL_SET_APP_PROFILE    = _IOC(_IOC_WRITE, 'K', 1201, 0);
+static const __u32 KSU_IOCTL_GET_FEATURE        = _IOC(_IOC_READ | _IOC_WRITE, 'K', 1301, 0);
+static const __u32 KSU_IOCTL_SET_FEATURE        = _IOC(_IOC_WRITE, 'K', 1401, 0);
+static const __u32 KSU_IOCTL_GET_WRAPPER_FD     = _IOC(_IOC_WRITE, 'K', 1501, 0);
+static const __u32 KSU_IOCTL_MANAGE_MARK        = _IOC(_IOC_READ | _IOC_WRITE, 'K', 1601, 0);
+static const __u32 KSU_IOCTL_NUKE_EXT4_SYSFS    = _IOC(_IOC_WRITE, 'K', 1701, 0);
+static const __u32 KSU_IOCTL_ADD_TRY_UMOUNT     = _IOC(_IOC_WRITE, 'K', 1801, 0);
+static const __u32 KSU_IOCTL_SET_INIT_PGRP      = _IO('K', 1901);
+static const __u32 KSU_IOCTL_GET_SULOG_FD       = _IOW('K', 2001, struct ksu_get_sulog_fd_cmd);
 
 #endif
