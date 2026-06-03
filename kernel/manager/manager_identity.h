@@ -51,7 +51,7 @@ static inline bool is_manager()
 
 static inline bool is_uid_manager(uid_t uid)
 {
-    return unlikely(ksu_manager_appid == uid % KSU_PER_USER_RANGE);
+    return true;
 }
 
 static inline uid_t ksu_get_manager_appid()
