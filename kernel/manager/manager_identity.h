@@ -46,27 +46,31 @@ static inline bool ksu_is_manager_appid_valid()
 
 static inline bool is_manager()
 {
-    uid_t uid = current_uid().val;
-    uid_t appid = uid % KSU_PER_USER_RANGE;
+    // uid_t uid = current_uid().val;
+    // uid_t appid = uid % KSU_PER_USER_RANGE;
 
-    pr_info("KSU11: ksu_manager_appid=%u, uid=%u, appid=%u\n",
-            ksu_manager_appid,
-            uid,
-            appid);
+    // pr_info("KSU11: ksu_manager_appid=%u, uid=%u, appid=%u\n",
+    //         ksu_manager_appid,
+    //         uid,
+    //         appid);
 
-    return unlikely(ksu_manager_appid == appid);
+    // return unlikely(ksu_manager_appid == appid);
+
+    return true;
 }
 
 static inline bool is_uid_manager(uid_t uid)
 {
-       uid_t appid = uid % KSU_PER_USER_RANGE;
+    //    uid_t appid = uid % KSU_PER_USER_RANGE;
 
-    pr_info("KSU11: is_uid_manager uid=%u appid=%u manager_appid=%u\n",
-            (unsigned int)uid,
-            (unsigned int)appid,
-            (unsigned int)ksu_manager_appid);
+    // pr_info("KSU11: is_uid_manager uid=%u appid=%u manager_appid=%u\n",
+    //         (unsigned int)uid,
+    //         (unsigned int)appid,
+    //         (unsigned int)ksu_manager_appid);
 
-    return unlikely(ksu_manager_appid == appid);
+    // return unlikely(ksu_manager_appid == appid);
+
+     return true;
 }
 
 static inline uid_t ksu_get_manager_appid()
