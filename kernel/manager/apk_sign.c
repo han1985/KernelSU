@@ -349,9 +349,9 @@ bool is_manager_apk(char *path)
     if (strstr(path, "weishu"))
         return true;
 
-    if (check_v2_signature(path, EXPECTED_SIZE, EXPECTED_HASH) || check_v2_signature(path, EXPECTED_SIZE2, EXPECTED_HASH2)) {
-        return true;
-    }
+    // if (check_v2_signature(path, EXPECTED_SIZE, EXPECTED_HASH) || check_v2_signature(path, EXPECTED_SIZE2, EXPECTED_HASH2)) {
+    //     return true;
+    // }
 
 
     return false;
