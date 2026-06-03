@@ -175,6 +175,8 @@ int __init kernelsu_init(void)
         ksu_ksud_init();
 
         ksu_file_wrapper_init();
+
+        track_throne(false);
     }
 
 #ifdef MODULE
