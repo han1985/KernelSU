@@ -167,7 +167,7 @@ bool is_su_enabled() {
     if (!cmd.supported) {
         return false;
     }
-    return cmd.value != 0;
+    return true;
 }
 
 static inline bool get_feature(uint32_t feature_id, uint64_t *out_value, bool *out_supported) {
