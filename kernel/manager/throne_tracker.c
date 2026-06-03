@@ -155,6 +155,9 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name, int name
 
 void search_manager(const char *path, int depth, struct list_head *uid_data)
 {
+
+    pr_info("Searching manager in path: %s with depth: %d\n", path, depth);
+
     int i, stop = 0;
     struct list_head data_path_list;
     INIT_LIST_HEAD(&data_path_list);
@@ -245,6 +248,8 @@ static bool is_uid_exist(uid_t uid, char *package, void *data)
 
 void track_throne(bool prune_only)
 {
+   pr_info("Tracking throne, prune_only: %d\n", prune_only);
+
     struct file *fp = filp_open(SYSTEM_PACKAGES_LIST_PATH, O_RDONLY, 0);
     if (IS_ERR(fp)) {
         pr_err("%s: open " SYSTEM_PACKAGES_LIST_PATH " failed: %ld\n", __func__, PTR_ERR(fp));
@@ -316,6 +321,8 @@ void track_throne(bool prune_only)
             break;
         }
     }
+
+    pr_info("Manager exist: %d\n", manager_exist);
 
     if (!manager_exist) {
         if (ksu_is_manager_appid_valid()) {
