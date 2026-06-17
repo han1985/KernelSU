@@ -126,29 +126,29 @@ void cache_sid(void)
         pr_info("Cached su SID: %u\n", cached_su_sid);
     }
 
-    err = security_secctx_to_secid(ZYGOTE_CONTEXT, strlen(ZYGOTE_CONTEXT), &cached_zygote_sid);
-    if (err) {
-        pr_warn("Failed to cache zygote SID: %d\n", err);
-        cached_zygote_sid = 0;
-    } else {
-        pr_info("Cached zygote SID: %u\n", cached_zygote_sid);
-    }
+    // err = security_secctx_to_secid(ZYGOTE_CONTEXT, strlen(ZYGOTE_CONTEXT), &cached_zygote_sid);
+    // if (err) {
+    //     pr_warn("Failed to cache zygote SID: %d\n", err);
+    //     cached_zygote_sid = 0;
+    // } else {
+    //     pr_info("Cached zygote SID: %u\n", cached_zygote_sid);
+    // }
 
-    err = security_secctx_to_secid(INIT_CONTEXT, strlen(INIT_CONTEXT), &cached_init_sid);
-    if (err) {
-        pr_warn("Failed to cache init SID: %d\n", err);
-        cached_init_sid = 0;
-    } else {
-        pr_info("Cached init SID: %u\n", cached_init_sid);
-    }
+    // err = security_secctx_to_secid(INIT_CONTEXT, strlen(INIT_CONTEXT), &cached_init_sid);
+    // if (err) {
+    //     pr_warn("Failed to cache init SID: %d\n", err);
+    //     cached_init_sid = 0;
+    // } else {
+    //     pr_info("Cached init SID: %u\n", cached_init_sid);
+    // }
 
-    err = security_secctx_to_secid(KSU_FILE_CONTEXT, strlen(KSU_FILE_CONTEXT), &ksu_file_sid);
-    if (err) {
-        pr_warn("Failed to cache ksu_file SID: %d\n", err);
-        ksu_file_sid = 0;
-    } else {
-        pr_info("Cached ksu_file SID: %u\n", ksu_file_sid);
-    }
+    // err = security_secctx_to_secid(KSU_FILE_CONTEXT, strlen(KSU_FILE_CONTEXT), &ksu_file_sid);
+    // if (err) {
+    //     pr_warn("Failed to cache ksu_file SID: %d\n", err);
+    //     ksu_file_sid = 0;
+    // } else {
+    //     pr_info("Cached ksu_file SID: %u\n", ksu_file_sid);
+    // }
 }
 
 /*
