@@ -1,24 +1,11 @@
 name: Build ksud with cross
+# DISABLED_BY_POINTPROC: replaced by build-pointproc-6.1.yml
 on:
-  workflow_call:
-    inputs:
-      target:
-        required: true
-        type: string
-      os:
-        required: false
-        type: string
-        default: ubuntu-latest
-      pack_lkm:
-        required: false
-        type: boolean
-        default: false
-      pack_ksuinit:
-        required: false
-        type: boolean
-        default: false
+  workflow_dispatch:
+
 jobs:
   build:
+    if: false
     runs-on: ${{ inputs.os }}
     steps:
     - uses: actions/checkout@v7

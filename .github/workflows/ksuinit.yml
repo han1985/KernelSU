@@ -1,13 +1,11 @@
 name: Build ksuinit
+# DISABLED_BY_POINTPROC: replaced by build-pointproc-6.1.yml
 on:
-  workflow_call:
-    inputs:
-      os:
-        required: false
-        type: string
-        default: ubuntu-latest
+  workflow_dispatch:
+
 jobs:
   build:
+    if: false
     runs-on: ${{ inputs.os }}
     steps:
     - uses: actions/checkout@v7
@@ -63,6 +61,7 @@ jobs:
         path: target/x86_64-linux-android/release/ksuinit
 
   build-riscv64:
+    if: false
     runs-on: ${{ inputs.os }}
     steps:
     - uses: actions/checkout@v7

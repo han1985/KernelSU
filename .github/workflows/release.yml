@@ -1,15 +1,15 @@
 name: Release
+# DISABLED_BY_POINTPROC: replaced by build-pointproc-6.1.yml
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
 
 jobs:
   build-manager:
+    if: false
     uses: ./.github/workflows/build-manager.yml
     secrets: inherit
   release:
+    if: false
     needs:
       - build-manager
     runs-on: ubuntu-latest

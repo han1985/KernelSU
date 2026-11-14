@@ -1,23 +1,12 @@
 name: ShellCheck
 
+# DISABLED_BY_POINTPROC: replaced by build-pointproc-6.1.yml
 on:
-  push:
-    branches:
-      - 'main'
-      - 'dev'
-    paths:
-      - '.github/workflows/shellcheck.yml'
-      - '**/*.sh'
-  pull_request:
-    branches:
-      - 'main'
-      - 'dev'
-    paths:
-      - '.github/workflows/shellcheck.yml'
-      - '**/*.sh'
+  workflow_dispatch:
 
 jobs:
   shellcheck:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

@@ -1,44 +1,12 @@
 name: Build Manager
 
+# DISABLED_BY_POINTPROC: replaced by build-pointproc-6.1.yml
 on:
-  push:
-    branches: [ "main", "dev", "ci" ]
-    paths:
-      - '.github/workflows/build-manager.yml'
-      - '.github/workflows/build-lkm.yml'
-      - '.github/workflows/ddk-lkm.yml'
-      - '.github/workflows/ksud.yml'
-      - '.github/workflows/ksud-extra.yml'
-      - '.github/workflows/ksuinit.yml'
-      - '.github/scripts/setup-rust-build.sh'
-      - '.github/riscv64-cargo.toml'
-      - 'repack_apk.py'
-      - 'manager/**'
-      - 'kernel/**'
-      - 'userspace/**'
-      - 'Cargo.lock'
-      - 'Cargo.toml'
-  pull_request:
-    branches: [ "main", "dev" ]
-    paths:
-      - '.github/workflows/build-manager.yml'
-      - '.github/workflows/build-lkm.yml'
-      - '.github/workflows/ddk-lkm.yml'
-      - '.github/workflows/ksud.yml'
-      - '.github/workflows/ksud-extra.yml'
-      - '.github/workflows/ksuinit.yml'
-      - '.github/scripts/setup-rust-build.sh'
-      - '.github/riscv64-cargo.toml'
-      - 'repack_apk.py'
-      - 'manager/**'
-      - 'kernel/**'
-      - 'userspace/**'
-      - 'Cargo.lock'
-      - 'Cargo.toml'
-  workflow_call:
+  workflow_dispatch:
 
 jobs:
   generate-key:
+    if: false
     runs-on: ubuntu-latest
     outputs:
       expected_size: ${{ steps.extract.outputs.expected_size }}
@@ -94,6 +62,7 @@ jobs:
           echo "Certificate hash: $HASH"
 
   build-lkm:
+    if: false
     needs: generate-key
     uses: ./.github/workflows/build-lkm.yml
     with:
@@ -102,9 +71,11 @@ jobs:
     secrets: inherit
 
   build-ksuinit:
+    if: false
     uses: ./.github/workflows/ksuinit.yml
 
   build-ksud:
+    if: false
     needs: [build-lkm, build-ksuinit]
     strategy:
       matrix:
@@ -119,6 +90,7 @@ jobs:
       pack_ksuinit: true
   
   build-ksud-extra:
+    if: false
     needs: [build-lkm, build-ksuinit]
     strategy:
       matrix:
@@ -141,6 +113,7 @@ jobs:
       pack_ksuinit: true
 
   build-manager:
+    if: false
     needs: [generate-key]
     if: always() && needs.generate-key.result == 'success'
     runs-on: ubuntu-latest
@@ -214,6 +187,7 @@ jobs:
           path: "manager/app/build/outputs/mapping/release/"
 
   repack-manager:
+    if: false
     needs: [build-manager, build-ksud, generate-key]
     if: always() && needs.build-manager.result == 'success' && needs.build-ksud.result == 'success' && needs.generate-key.result == 'success'
     runs-on: ubuntu-latest

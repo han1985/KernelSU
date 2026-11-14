@@ -1,25 +1,11 @@
 name: Build LKM for KernelSU
+# DISABLED_BY_POINTPROC: replaced by build-pointproc-6.1.yml
 on:
-  workflow_call:
-    inputs:
-      package_name:
-        description: 'package name of manager'
-        required: false
-        default: ''
-        type: string
-      expected_size:
-        description: 'expected signature size'
-        required: false
-        default: ''
-        type: string
-      expected_hash:
-        description: 'expected signature hash'
-        required: false
-        default: ''
-        type: string
   workflow_dispatch:
+
 jobs:
   build-lkm:
+    if: false
     strategy:
       matrix:
         kmi:

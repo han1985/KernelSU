@@ -1,29 +1,12 @@
 name: ClangFormat check
 
+# DISABLED_BY_POINTPROC: replaced by build-pointproc-6.1.yml
 on:
-  push:
-    branches:
-      - 'main'
-      - 'dev'
-    paths:
-      - '.github/workflows/clang-format.yml'
-      - 'kernel/**/*.c'
-      - 'kernel/**/*.h'
-  pull_request:
-    branches:
-      - 'main'
-      - 'dev'
-    paths:
-      - '.github/workflows/clang-format.yml'
-      - 'kernel/**/*.c'
-      - 'kernel/**/*.h'
-      - 'kernel/.clang-format'
-
-permissions:
-  checks: write
+  workflow_dispatch:
 
 jobs:
   format:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

@@ -1,26 +1,12 @@
 name: Clippy check
 
+# DISABLED_BY_POINTPROC: replaced by build-pointproc-6.1.yml
 on:
-  push:
-    branches:
-      - main
-      - dev
-    paths:
-      - '.github/workflows/clippy.yml'
-      - 'userspace/**'
-  pull_request:
-    branches:
-      - main
-      - dev
-    paths:
-      - '.github/workflows/clippy.yml'
-      - 'userspace/**'
-
-env:
-  RUSTFLAGS: '-Dwarnings'
+  workflow_dispatch:
 
 jobs:
   clippy:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

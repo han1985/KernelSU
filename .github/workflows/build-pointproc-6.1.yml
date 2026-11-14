@@ -1,0 +1,140 @@
+name: Build pointProcmodule for Android 6.1+ kernels
+
+# KMIs extracted from build-lkm.yml that are Linux 6.1 and newer:
+#   android14-6.1, android15-6.6, android16-6.12, android17-6.18
+on:
+  push:
+    branches: [ "main", "dev", "ci" ]
+    paths:
+      - '.github/workflows/build-pointproc-6.1.yml'
+  pull_request:
+    branches: [ "main", "dev" ]
+    paths:
+      - '.github/workflows/build-pointproc-6.1.yml'
+  workflow_dispatch:
+
+jobs:
+  build-pointproc:
+    name: Build pointProcmodule for ${{ matrix.kmi }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        kmi:
+          - android14-6.1
+          - android15-6.6
+          - android16-6.12
+          - android17-6.18
+    container:
+      image: ghcr.io/ylarod/ddk-min:${{ matrix.kmi }}-20260828
+      options: --privileged
+
+    steps:
+      - name: Checkout KernelSU
+        uses: actions/checkout@v7
+
+      - name: Checkout pointProcmodule
+        uses: actions/checkout@v7
+        with:
+          repository: han1985/pointProcmodule
+          path: pointProcmodule
+          token: ${{ secrets.POINTPROC_TOKEN || github.token }}
+
+      - name: Integrate pointProcmodule into kernel drivers and build
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE" || true
+
+          KMI="${{ matrix.kmi }}"
+          SRC="/opt/ddk/src/${KMI}"
+          KDIR="/opt/ddk/kdir/${KMI}"
+
+          echo "=== DDK layout ==="
+          ls -la /opt/ddk || true
+          ls -la "$SRC" | head
+          ls -la "$KDIR" | head
+
+          if [ -d "$SRC/common/drivers" ]; then
+            DRIVER_DIR="$SRC/common/drivers"
+          elif [ -d "$SRC/drivers" ]; then
+            DRIVER_DIR="$SRC/drivers"
+          else
+            echo "[ERROR] neither common/drivers nor drivers found under $SRC"
+            find "$SRC" -maxdepth 3 -type d -name drivers | head
+            exit 1
+          fi
+
+          echo "DRIVER_DIR=$DRIVER_DIR"
+          DRIVER_MAKEFILE="$DRIVER_DIR/Makefile"
+          test -f "$DRIVER_MAKEFILE"
+
+          rm -rf "$DRIVER_DIR/pointProcmodule"
+          cp -a "$GITHUB_WORKSPACE/pointProcmodule" "$DRIVER_DIR/pointProcmodule"
+          rm -rf "$DRIVER_DIR/pointProcmodule/.git"
+
+          echo "=== Patch $DRIVER_MAKEFILE ==="
+          # Remove the KernelSU in-tree line if present.
+          sed -i '/obj-\$(CONFIG_KSU)[[:space:]]*+=[[:space:]]*kernelsu\//d' "$DRIVER_MAKEFILE"
+
+          # Append pointProcmodule as the last line (avoid duplicates).
+          if ! grep -qE 'obj-\$\(CONFIG_KSU\)[[:space:]]*\+=[[:space:]]*pointProcmodule/' "$DRIVER_MAKEFILE"; then
+            # Ensure the file ends with a newline, then add the line.
+            sed -i -e '$a\' "$DRIVER_MAKEFILE"
+            echo 'obj-$(CONFIG_KSU) += pointProcmodule/' >> "$DRIVER_MAKEFILE"
+          fi
+
+          echo "----- Makefile tail -----"
+          tail -n 20 "$DRIVER_MAKEFILE"
+
+          if [ -f "$DRIVER_DIR/pointProcmodule/Kconfig" ] && [ -f "$DRIVER_DIR/Kconfig" ]; then
+            if ! grep -q 'pointProcmodule/Kconfig' "$DRIVER_DIR/Kconfig"; then
+              sed -i '/endmenu/i source "drivers/pointProcmodule/Kconfig"' "$DRIVER_DIR/Kconfig" \
+                || echo 'source "drivers/pointProcmodule/Kconfig"' >> "$DRIVER_DIR/Kconfig"
+            fi
+          fi
+
+          echo "=== Building pointProcmodule for KMI: ${KMI} ==="
+          test -d "$KDIR"
+
+          EXTRA_ARGS=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS KSU_IS_PR_BUILD=1"
+          fi
+
+          make -C "$KDIR" \
+            M="$DRIVER_DIR/pointProcmodule" \
+            CONFIG_KSU=m \
+            CC=clang \
+            $EXTRA_ARGS \
+            modules
+
+          echo "=== Build completed ==="
+          find "$DRIVER_DIR/pointProcmodule" -name '*.ko' -ls
+
+          OUT_DIR="$GITHUB_WORKSPACE/out/aarch64"
+          mkdir -p "$OUT_DIR"
+
+          if [ -z "$(find "$DRIVER_DIR/pointProcmodule" -name '*.ko' -print -quit)" ]; then
+            echo "[ERROR] no .ko produced"
+            exit 1
+          fi
+
+          find "$DRIVER_DIR/pointProcmodule" -name '*.ko' -exec sh -c '
+            kmi="$1"
+            out="$2"
+            shift 2
+            for ko in "$@"; do
+              dest="$out/${kmi}_$(basename "$ko")"
+              cp "$ko" "$dest"
+              echo "Copied $ko -> $dest"
+              echo "Size: $(du -h "$dest" | cut -f1)"
+              llvm-strip -d "$dest" || true
+              echo "Size after stripping: $(du -h "$dest" | cut -f1)"
+            done
+          ' sh "$KMI" "$OUT_DIR" {} +
+
+      - name: Upload pointProcmodule artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: aarch64-${{ matrix.kmi }}-pointproc
+          path: out/aarch64/${{ matrix.kmi }}_*.ko

@@ -1,35 +1,12 @@
 name: Build KernelSU Kernel Module
 
+# DISABLED_BY_POINTPROC: replaced by build-pointproc-6.1.yml
 on:
-  workflow_call:
-    inputs:
-      kmi:
-        description: 'KMI version'
-        required: true
-        type: string
-      ddk_release:
-        description: 'DDK release version'
-        required: false
-        default: '20260828'
-        type: string
-      package_name:
-        description: 'package name of manager'
-        required: false
-        default: ''
-        type: string
-      expected_size:
-        description: 'expected signature size'
-        required: false
-        default: ''
-        type: string
-      expected_hash:
-        description: 'expected signature hash'
-        required: false
-        default: ''
-        type: string
+  workflow_dispatch:
 
 jobs:
   build-kernelsu-ko:
+    if: false
     name: Build kernelsu.ko for ${{ inputs.kmi }}
     runs-on: ubuntu-latest
     container:

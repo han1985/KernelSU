@@ -1,18 +1,12 @@
 name: Publish NPM package
 
+# DISABLED_BY_POINTPROC: replaced by build-pointproc-6.1.yml
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'js/package.json'
-  pull_request:
-    paths:
-      - '.github/workflows/npm.yml'
   workflow_dispatch:
 
 jobs:
   deploy:
+    if: false
     runs-on: ubuntu-latest
 
     permissions:
