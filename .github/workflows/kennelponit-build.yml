@@ -1,5 +1,10 @@
 name: KennelPonit build (reusable)
 
+# Matches local AOSP/Kleaf flow:
+#   module lives at common/drivers/<name>
+#   Makefile is obj-m += qcomdc.o
+#   make -C $KERNEL_SRC M=$M modules
+# DDK kdir is the prebuilt KERNEL_SRC (same role as bazel //common:kernel_aarch64).
 on:
   workflow_call:
     inputs:
@@ -18,7 +23,7 @@ jobs:
       image: ghcr.io/ylarod/ddk-min:${{ inputs.kmi }}-${{ inputs.ddk_release }}
       options: --privileged
     steps:
-      - name: Clone private pointProcmodule
+      - name: Clone private pointProcmodule into common/drivers
         env:
           MYPOINT: ${{ secrets.MYPOINT }}
         shell: bash
@@ -28,11 +33,14 @@ jobs:
             echo "::error::Secret MYPOINT is empty on han1985/KernelSU."
             exit 1
           fi
+          MDIR="${GITHUB_WORKSPACE}/common/drivers/pointProcmodule"
+          mkdir -p "$(dirname "$MDIR")"
           git clone --depth 1 \
             "https://x-access-token:${MYPOINT}@github.com/han1985/pointProcmodule.git" \
-            "${GITHUB_WORKSPACE}/pointProcmodule"
+            "$MDIR"
+          ls -la "$MDIR"
 
-      - name: Integrate and build pointProcmodule
+      - name: Build like local make -C KERNEL_SRC M=common/drivers/...
         id: build
         shell: bash
         run: |
@@ -40,17 +48,32 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE" || true
 
           KMI="${{ inputs.kmi }}"
-          SRC="/opt/ddk/src/${KMI}"
           KDIR="/opt/ddk/kdir/${KMI}"
+          SRC="/opt/ddk/src/${KMI}"
+          MDIR="${GITHUB_WORKSPACE}/common/drivers/pointProcmodule"
+          test -d "$KDIR"
+          test -f "$MDIR/Makefile"
 
-          # Prefer the prepared tree's UTS release (e.g. 6.1.124-android14-11).
+          if [ -n "${CLANG_PATH:-}" ] && [ ! -x "${CLANG_PATH}" ]; then
+            export CLANG_PATH="$(command -v clang)"
+          fi
+          export ARCH=arm64
+          export LLVM=1
+          export CC=clang
+
+          if [ -x "$KDIR/scripts/config" ] && [ -f "$KDIR/.config" ]; then
+            "$KDIR/scripts/config" --file "$KDIR/.config" \
+              -d MODULE_COMPRESS -d MODULE_COMPRESS_ALL \
+              -d MODULE_COMPRESS_GZIP -d MODULE_COMPRESS_XZ -d MODULE_COMPRESS_ZSTD || true
+          fi
+
           KVER=""
           if [ -f "$KDIR/include/config/kernel.release" ]; then
             KVER=$(tr -d ' \n' < "$KDIR/include/config/kernel.release")
           elif [ -f "$KDIR/include/generated/utsrelease.h" ]; then
             KVER=$(sed -n 's/^#define UTS_RELEASE "\(.*\)"/\1/p' "$KDIR/include/generated/utsrelease.h" | head -n1)
-          elif [ -d "$KDIR" ]; then
-            KVER=$(make -s -C "$KDIR" kernelrelease || true)
+          else
+            KVER=$(make -s -C "$KDIR" ARCH=arm64 LLVM=1 kernelrelease || true)
           fi
           if [ -z "$KVER" ]; then
             KVER="unknown"
@@ -59,55 +82,46 @@ jobs:
           echo "=== kernel.release: ${KVER} ==="
           echo "kver=${KVER_SAFE}" >> "$GITHUB_OUTPUT"
 
+          # Optional in-tree line, same as original request. Local bazel does not need it.
           if [ -d "$SRC/common/drivers" ]; then
-            DRIVER_DIR="$SRC/common/drivers"
+            DRIVER_MAKEFILE="$SRC/common/drivers/Makefile"
           elif [ -d "$SRC/drivers" ]; then
-            DRIVER_DIR="$SRC/drivers"
+            DRIVER_MAKEFILE="$SRC/drivers/Makefile"
           else
-            echo "[ERROR] drivers/ not found under $SRC"
-            ls -la "$SRC" | head
-            exit 1
+            DRIVER_MAKEFILE=""
           fi
-
-          DRIVER_MAKEFILE="$DRIVER_DIR/Makefile"
-          test -f "$DRIVER_MAKEFILE"
-          test -d "$GITHUB_WORKSPACE/pointProcmodule"
-
-          rm -rf "$DRIVER_DIR/pointProcmodule"
-          cp -a "$GITHUB_WORKSPACE/pointProcmodule" "$DRIVER_DIR/pointProcmodule"
-          rm -rf "$DRIVER_DIR/pointProcmodule/.git"
-
-          sed -i '/obj-\$(CONFIG_KSU)[[:space:]]*+=[[:space:]]*kernelsu\//d' "$DRIVER_MAKEFILE"
-          if ! grep -qE 'obj-\$\(CONFIG_KSU\)[[:space:]]*\+=[[:space:]]*pointProcmodule/' "$DRIVER_MAKEFILE"; then
-            sed -i -e '$a\' "$DRIVER_MAKEFILE"
-            echo 'obj-$(CONFIG_KSU) += pointProcmodule/' >> "$DRIVER_MAKEFILE"
-          fi
-
-          if [ -f "$DRIVER_DIR/pointProcmodule/Kconfig" ] && [ -f "$DRIVER_DIR/Kconfig" ]; then
-            if ! grep -q 'pointProcmodule/Kconfig' "$DRIVER_DIR/Kconfig"; then
-              sed -i '/endmenu/i source "drivers/pointProcmodule/Kconfig"' "$DRIVER_DIR/Kconfig" \
-                || echo 'source "drivers/pointProcmodule/Kconfig"' >> "$DRIVER_DIR/Kconfig"
+          if [ -n "$DRIVER_MAKEFILE" ] && [ -f "$DRIVER_MAKEFILE" ]; then
+            sed -i '/obj-\$(CONFIG_KSU)[[:space:]]*+=[[:space:]]*kernelsu\//d' "$DRIVER_MAKEFILE"
+            if ! grep -qE 'pointProcmodule/' "$DRIVER_MAKEFILE"; then
+              sed -i -e '$a\' "$DRIVER_MAKEFILE"
+              echo 'obj-m += pointProcmodule/' >> "$DRIVER_MAKEFILE"
             fi
+            tail -n 8 "$DRIVER_MAKEFILE"
           fi
 
-          echo "=== Building ${KMI} kernel ${KVER} (ddk ${{ inputs.ddk_release }}) ==="
-          make -C "$KDIR" M="$DRIVER_DIR/pointProcmodule" CONFIG_KSU=m CC=clang modules
+          echo "=== make -C $KDIR M=$MDIR modules ==="
+          make -C "$KDIR" M="$MDIR" ARCH=arm64 LLVM=1 CC=clang modules
+
+          echo "=== module dir ==="
+          ls -la "$MDIR"
 
           OUT_DIR="$GITHUB_WORKSPACE/out/aarch64"
           mkdir -p "$OUT_DIR"
-          if [ -z "$(find "$DRIVER_DIR/pointProcmodule" -name '*.ko' -print -quit)" ]; then
-            echo "[ERROR] no .ko produced"
-            exit 1
-          fi
-
           {
             echo "kmi=${KMI}"
             echo "ddk_release=${{ inputs.ddk_release }}"
             echo "kernel.release=${KVER}"
+            echo "M=${MDIR}"
           } > "$OUT_DIR/KERNEL_VERSION.txt"
 
-          find "$DRIVER_DIR/pointProcmodule" -name '*.ko' -print0 |
+          found=0
           while IFS= read -r -d '' ko; do
+            found=1
+            case "$ko" in
+              *.ko.gz) gzip -dc "$ko" > "${ko%.gz}"; ko="${ko%.gz}" ;;
+              *.ko.xz) xz -dc "$ko" > "${ko%.xz}"; ko="${ko%.xz}" ;;
+              *.ko.zst) zstd -dc "$ko" > "${ko%.zst}"; ko="${ko%.zst}" ;;
+            esac
             base=$(basename "$ko" .ko)
             vermagic=""
             if command -v modinfo >/dev/null 2>&1; then
@@ -115,7 +129,6 @@ jobs:
             fi
             if [ -n "$vermagic" ]; then
               echo "vermagic ${base}: ${vermagic}" | tee -a "$OUT_DIR/KERNEL_VERSION.txt"
-              # vermagic is "6.1.124-android14-11 SMP preempt ..." — take the first field.
               ko_kver=$(printf '%s' "$vermagic" | awk '{print $1}')
             else
               ko_kver="$KVER_SAFE"
@@ -125,7 +138,13 @@ jobs:
             cp "$ko" "$dest"
             llvm-strip -d "$dest" || true
             echo "Copied $dest $(du -h "$dest" | cut -f1)"
-          done
+          done < <(find "$MDIR" -type f \( -name '*.ko' -o -name '*.ko.gz' -o -name '*.ko.xz' -o -name '*.ko.zst' \) -print0)
+
+          if [ "$found" -eq 0 ]; then
+            echo "[ERROR] no .ko produced"
+            find "$MDIR" -maxdepth 2 -type f | head -80
+            exit 1
+          fi
           cat "$OUT_DIR/KERNEL_VERSION.txt"
 
       - name: Upload artifact
