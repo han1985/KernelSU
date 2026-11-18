@@ -1,6 +1,7 @@
 name: KennelPonit-6.1.x
 
-# All DDK snapshots of GKI android14-6.1 (Linux 6.1.x).
+# Same KMI/image as original KernelSU .github/workflows/build-lkm.yml + ddk-lkm.yml:
+#   android14-6.1  ->  ghcr.io/ylarod/ddk-min:android14-6.1-20260828
 # Manual only.
 on:
   workflow_dispatch:
@@ -10,15 +11,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        kmi: [android14-6.1]
-        ddk_release:
-          - "20260828"
-          - "20251104"
-          - "20251016"
-          - "20251007"
-          - "20250825"
+        kmi:
+          - android14-6.1
     uses: ./.github/workflows/kennelponit-build.yml
     secrets: inherit
     with:
       kmi: ${{ matrix.kmi }}
-      ddk_release: ${{ matrix.ddk_release }}
+      ddk_release: "20260828"

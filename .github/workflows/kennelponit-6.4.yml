@@ -1,17 +1,19 @@
 name: KennelPonit-6.4.x
 
-# Android GKI / ylarod DDK has no 6.4.x image (GKI jumped 6.1 -> 6.6).
-# Manual only. This workflow records that gap instead of pulling a fake image.
+# Original KernelSU build-lkm.yml has no 6.4 KMI (GKI goes 6.1 -> 6.6).
+# Manual only.
 on:
   workflow_dispatch:
 
 jobs:
   unavailable:
-    name: no DDK 6.4.x
+    name: no KernelSU/DDK 6.4.x
     runs-on: ubuntu-latest
     steps:
       - name: Explain
         run: |
-          echo "KennelPonit-6.4.x: DDK/GKI has no android*-6.4 image."
-          echo "Available nearby: KennelPonit-6.1.x (android14-6.1), KennelPonit-6.6.x (android15-6.6)."
+          echo "Original KernelSU Action KMI list:"
+          echo "  android12-5.10 android13-5.10 android13-5.15 android14-5.15"
+          echo "  android14-6.1 android15-6.6 android16-6.12 android17-6.18"
+          echo "There is no 6.4.x. Use KennelPonit-6.1.x or KennelPonit-6.6.x."
           exit 1
