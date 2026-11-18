@@ -31,13 +31,23 @@ jobs:
       - name: Checkout KernelSU
         uses: actions/checkout@v7
 
-      - name: Checkout pointProcmodule
-        uses: actions/checkout@v7
-        with:
-          repository: han1985/pointProcmodule
-          path: pointProcmodule
-          token: ${{ secrets.MYPOINT }}
-          persist-credentials: false
+      - name: Clone private pointProcmodule
+        env:
+          MYPOINT: ${{ secrets.MYPOINT }}
+        run: |
+          set -euo pipefail
+          if [ -z "${MYPOINT:-}" ]; then
+            echo "::error::Secret MYPOINT is empty. GitHub omitted token, so checkout@v7 failed."
+            echo "Add MYPOINT on han1985/KernelSU (the repo running this Action), not on pointProcmodule."
+            echo "Path: Settings → Secrets and variables → Actions → Repository secrets."
+            echo "Value must be a PAT that can read han1985/pointProcmodule (classic: repo, or fine-grained Contents: Read)."
+            echo "If it is an Environment secret, this job must set environment: <name>."
+            exit 1
+          fi
+          git clone --depth 1 \
+            --config "http.extraheader=AUTHORIZATION: bearer ${MYPOINT}" \
+            https://github.com/han1985/pointProcmodule.git \
+            "${GITHUB_WORKSPACE}/pointProcmodule"
 
       - name: Integrate pointProcmodule into kernel drivers and build
         run: |
