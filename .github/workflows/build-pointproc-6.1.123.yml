@@ -1,8 +1,8 @@
 name: test.1
 
 # Fast smoke test: fetch private pointProcmodule with MYPOINT.
-# Use a Classic PAT with the `repo` scope. Fine-grained tokens often return
-# 403 "Resource not accessible by personal access token" on archive/git APIs.
+# Fine-grained PAT that can GET /repos but not git-clone is missing Contents.
+# Set Contents to "Read and write" on that token (same MYPOINT value is fine).
 on:
   workflow_dispatch:
 
@@ -34,22 +34,29 @@ jobs:
           echo "=== token identity ==="
           auth https://api.github.com/user | python3 -c 'import json,sys; d=json.load(sys.stdin); print("login:", d.get("login", d.get("message", d)))'
 
-          echo "=== repo API ==="
+          echo "=== repo metadata ==="
           repo_code=$(auth -o /tmp/repo.json -w "%{http_code}" \
             https://api.github.com/repos/han1985/pointProcmodule)
-          echo "GET /repos/han1985/pointProcmodule -> HTTP ${repo_code}"
-          python3 -c 'import json; d=json.load(open("/tmp/repo.json")); print("full_name:", d.get("full_name")); print("private:", d.get("private")); print("message:", d.get("message",""))'
+          echo "GET /repos -> HTTP ${repo_code}"
 
-          echo "=== git clone ==="
-          if git clone --depth 1 \
-            "https://x-access-token:${MYPOINT}@github.com/han1985/pointProcmodule.git" \
-            pointProcmodule; then
-            echo "=== clone ok ==="
-            git -C pointProcmodule log -1 --oneline
-            ls -la pointProcmodule
-            exit 0
+          echo "=== contents permission ==="
+          contents_code=$(auth -o /tmp/contents.json -w "%{http_code}" \
+            https://api.github.com/repos/han1985/pointProcmodule/contents/)
+          echo "GET /contents -> HTTP ${contents_code}"
+          python3 -c 'import json; d=json.load(open("/tmp/contents.json")); print(d if isinstance(d, dict) and "message" in d else "contents list ok, entries: %s" % (len(d) if isinstance(d, list) else type(d).__name__))'
+
+          if [ "$contents_code" != "200" ]; then
+            echo "::error::PAT has no Contents permission on han1985/pointProcmodule."
+            echo "Edit the Fine-grained token: Repository permissions -> Contents -> Read and write."
+            echo "Repository access must include pointProcmodule. Saving permissions is enough; keep the same MYPOINT secret."
+            echo "Or replace MYPOINT with a Classic token that has the repo scope."
+            exit 1
           fi
 
-          echo "::error::Clone failed. Put a Classic PAT (scope: repo) into KernelSU secret MYPOINT."
-          echo "Fine-grained tokens need Contents: Read and write on pointProcmodule, and often still fail."
-          exit 1
+          echo "=== git clone ==="
+          GIT_TERMINAL_PROMPT=0 git clone --depth 1 \
+            "https://x-access-token:${MYPOINT}@github.com/han1985/pointProcmodule.git" \
+            pointProcmodule
+          echo "=== clone ok ==="
+          git -C pointProcmodule log -1 --oneline
+          ls -la pointProcmodule

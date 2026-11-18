@@ -1,0 +1,23 @@
+name: KennelPonit-6.6.x
+
+# All DDK snapshots of GKI android15-6.6 (Linux 6.6.x).
+# Manual only.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        kmi: [android15-6.6]
+        ddk_release:
+          - "20260828"
+          - "20251104"
+          - "20251016"
+          - "20251007"
+    uses: ./.github/workflows/kennelponit-build.yml
+    secrets: inherit
+    with:
+      kmi: ${{ matrix.kmi }}
+      ddk_release: ${{ matrix.ddk_release }}

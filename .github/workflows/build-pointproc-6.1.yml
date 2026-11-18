@@ -3,14 +3,6 @@ name: Build pointProcmodule for Android 6.1+ kernels
 # KMIs extracted from build-lkm.yml that are Linux 6.1 and newer:
 #   android14-6.1, android15-6.6, android16-6.12, android17-6.18
 on:
-  push:
-    branches: [ "main", "dev", "ci" ]
-    paths:
-      - '.github/workflows/build-pointproc-6.1.yml'
-  pull_request:
-    branches: [ "main", "dev" ]
-    paths:
-      - '.github/workflows/build-pointproc-6.1.yml'
   workflow_dispatch:
 
 jobs:
