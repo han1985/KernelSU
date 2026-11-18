@@ -1,7 +1,7 @@
 name: KennelPonit-6.12.x
 
-# Same KMI/image as original KernelSU .github/workflows/build-lkm.yml + ddk-lkm.yml:
-#   android16-6.12  ->  ghcr.io/ylarod/ddk-min:android16-6.12-20260828
+# Official Android GKI android16-6.12 monthly lines (not DDK's single KMI image).
+# Source: https://source.android.com/docs/core/architecture/kernel/gki-android16-6_12-release-builds
 # Manual only.
 on:
   workflow_dispatch:
@@ -11,10 +11,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        kmi:
-          - android16-6.12
-    uses: ./.github/workflows/kennelponit-build.yml
+        include:
+          - gki_branch: android16-6.12-2026-09
+            kver: "6.12.92"
+          - gki_branch: android16-6.12-2026-06
+            kver: "6.12.81"
+          - gki_branch: android16-6.12-2026-03
+            kver: "6.12.69"
+          - gki_branch: android16-6.12-2025-12
+            kver: "6.12.58"
+          - gki_branch: android16-6.12-2025-09
+            kver: "6.12.38"
+    uses: ./.github/workflows/kennelponit-gki-build.yml
     secrets: inherit
     with:
-      kmi: ${{ matrix.kmi }}
+      kmi: android16-6.12
+      gki_branch: ${{ matrix.gki_branch }}
       ddk_release: "20260828"

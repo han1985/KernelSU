@@ -33,6 +33,7 @@ jobs:
             "${GITHUB_WORKSPACE}/pointProcmodule"
 
       - name: Integrate and build pointProcmodule
+        id: build
         shell: bash
         run: |
           set -euo pipefail
@@ -42,10 +43,21 @@ jobs:
           SRC="/opt/ddk/src/${KMI}"
           KDIR="/opt/ddk/kdir/${KMI}"
 
-          echo "=== kernel.release ==="
+          # Prefer the prepared tree's UTS release (e.g. 6.1.124-android14-11).
+          KVER=""
           if [ -f "$KDIR/include/config/kernel.release" ]; then
-            cat "$KDIR/include/config/kernel.release"
+            KVER=$(tr -d ' \n' < "$KDIR/include/config/kernel.release")
+          elif [ -f "$KDIR/include/generated/utsrelease.h" ]; then
+            KVER=$(sed -n 's/^#define UTS_RELEASE "\(.*\)"/\1/p' "$KDIR/include/generated/utsrelease.h" | head -n1)
+          elif [ -d "$KDIR" ]; then
+            KVER=$(make -s -C "$KDIR" kernelrelease || true)
           fi
+          if [ -z "$KVER" ]; then
+            KVER="unknown"
+          fi
+          KVER_SAFE=$(printf '%s' "$KVER" | tr '/ :' '---')
+          echo "=== kernel.release: ${KVER} ==="
+          echo "kver=${KVER_SAFE}" >> "$GITHUB_OUTPUT"
 
           if [ -d "$SRC/common/drivers" ]; then
             DRIVER_DIR="$SRC/common/drivers"
@@ -78,7 +90,7 @@ jobs:
             fi
           fi
 
-          echo "=== Building ${KMI} (${{ inputs.ddk_release }}) ==="
+          echo "=== Building ${KMI} kernel ${KVER} (ddk ${{ inputs.ddk_release }}) ==="
           make -C "$KDIR" M="$DRIVER_DIR/pointProcmodule" CONFIG_KSU=m CC=clang modules
 
           OUT_DIR="$GITHUB_WORKSPACE/out/aarch64"
@@ -87,18 +99,37 @@ jobs:
             echo "[ERROR] no .ko produced"
             exit 1
           fi
-          find "$DRIVER_DIR/pointProcmodule" -name '*.ko' -exec sh -c '
-            kmi="$1"; rel="$2"; out="$3"; shift 3
-            for ko in "$@"; do
-              dest="$out/${kmi}-${rel}_$(basename "$ko")"
-              cp "$ko" "$dest"
-              llvm-strip -d "$dest" || true
-              echo "Copied $dest $(du -h "$dest" | cut -f1)"
-            done
-          ' sh "$KMI" "${{ inputs.ddk_release }}" "$OUT_DIR" {} +
+
+          {
+            echo "kmi=${KMI}"
+            echo "ddk_release=${{ inputs.ddk_release }}"
+            echo "kernel.release=${KVER}"
+          } > "$OUT_DIR/KERNEL_VERSION.txt"
+
+          find "$DRIVER_DIR/pointProcmodule" -name '*.ko' -print0 |
+          while IFS= read -r -d '' ko; do
+            base=$(basename "$ko" .ko)
+            vermagic=""
+            if command -v modinfo >/dev/null 2>&1; then
+              vermagic=$(modinfo -F vermagic "$ko" 2>/dev/null || true)
+            fi
+            if [ -n "$vermagic" ]; then
+              echo "vermagic ${base}: ${vermagic}" | tee -a "$OUT_DIR/KERNEL_VERSION.txt"
+              # vermagic is "6.1.124-android14-11 SMP preempt ..." — take the first field.
+              ko_kver=$(printf '%s' "$vermagic" | awk '{print $1}')
+            else
+              ko_kver="$KVER_SAFE"
+            fi
+            ko_kver_safe=$(printf '%s' "$ko_kver" | tr '/ :' '---')
+            dest="$OUT_DIR/${KMI}_${ko_kver_safe}_${base}.ko"
+            cp "$ko" "$dest"
+            llvm-strip -d "$dest" || true
+            echo "Copied $dest $(du -h "$dest" | cut -f1)"
+          done
+          cat "$OUT_DIR/KERNEL_VERSION.txt"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: aarch64-${{ inputs.kmi }}-${{ inputs.ddk_release }}-pointproc
-          path: out/aarch64/${{ inputs.kmi }}-${{ inputs.ddk_release }}_*.ko
+          name: aarch64-${{ inputs.kmi }}_${{ steps.build.outputs.kver }}
+          path: out/aarch64/
