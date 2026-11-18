@@ -1,0 +1,118 @@
+name: Test pointProcmodule android14-6.1 (6.1.123)
+
+# Single-KMI smoke test. DDK image is GKI android14-6.1 (Linux 6.1.x / 6.1.123 line).
+# Private repo han1985/pointProcmodule is cloned with secret MYPOINT (a PAT that
+# can read that repo). Do not fall back to github.token — it cannot see private repos.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-pointproc-6-1-123:
+    name: Build pointProcmodule android14-6.1
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ylarod/ddk-min:android14-6.1-20260828
+      options: --privileged
+
+    steps:
+      - name: Checkout KernelSU
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Checkout private pointProcmodule
+        uses: actions/checkout@v7
+        with:
+          repository: han1985/pointProcmodule
+          path: pointProcmodule
+          token: ${{ secrets.MYPOINT }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Integrate pointProcmodule and build
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE" || true
+
+          KMI="android14-6.1"
+          SRC="/opt/ddk/src/${KMI}"
+          KDIR="/opt/ddk/kdir/${KMI}"
+
+          echo "=== kernel.release ==="
+          if [ -f "$KDIR/include/config/kernel.release" ]; then
+            cat "$KDIR/include/config/kernel.release"
+          else
+            echo "(no kernel.release file)"
+          fi
+
+          if [ -d "$SRC/common/drivers" ]; then
+            DRIVER_DIR="$SRC/common/drivers"
+          elif [ -d "$SRC/drivers" ]; then
+            DRIVER_DIR="$SRC/drivers"
+          else
+            echo "[ERROR] neither common/drivers nor drivers found under $SRC"
+            ls -la "$SRC" | head
+            exit 1
+          fi
+
+          echo "DRIVER_DIR=$DRIVER_DIR"
+          DRIVER_MAKEFILE="$DRIVER_DIR/Makefile"
+          test -f "$DRIVER_MAKEFILE"
+          test -d "$GITHUB_WORKSPACE/pointProcmodule"
+
+          rm -rf "$DRIVER_DIR/pointProcmodule"
+          cp -a "$GITHUB_WORKSPACE/pointProcmodule" "$DRIVER_DIR/pointProcmodule"
+          rm -rf "$DRIVER_DIR/pointProcmodule/.git"
+
+          sed -i '/obj-\$(CONFIG_KSU)[[:space:]]*+=[[:space:]]*kernelsu\//d' "$DRIVER_MAKEFILE"
+          if ! grep -qE 'obj-\$\(CONFIG_KSU\)[[:space:]]*\+=[[:space:]]*pointProcmodule/' "$DRIVER_MAKEFILE"; then
+            sed -i -e '$a\' "$DRIVER_MAKEFILE"
+            echo 'obj-$(CONFIG_KSU) += pointProcmodule/' >> "$DRIVER_MAKEFILE"
+          fi
+
+          echo "----- Makefile tail -----"
+          tail -n 10 "$DRIVER_MAKEFILE"
+
+          if [ -f "$DRIVER_DIR/pointProcmodule/Kconfig" ] && [ -f "$DRIVER_DIR/Kconfig" ]; then
+            if ! grep -q 'pointProcmodule/Kconfig' "$DRIVER_DIR/Kconfig"; then
+              sed -i '/endmenu/i source "drivers/pointProcmodule/Kconfig"' "$DRIVER_DIR/Kconfig" \
+                || echo 'source "drivers/pointProcmodule/Kconfig"' >> "$DRIVER_DIR/Kconfig"
+            fi
+          fi
+
+          echo "=== Building pointProcmodule for ${KMI} ==="
+          test -d "$KDIR"
+          make -C "$KDIR" M="$DRIVER_DIR/pointProcmodule" CONFIG_KSU=m CC=clang modules
+
+          echo "=== Build completed ==="
+          find "$DRIVER_DIR/pointProcmodule" -name '*.ko' -ls
+
+          OUT_DIR="$GITHUB_WORKSPACE/out/aarch64"
+          mkdir -p "$OUT_DIR"
+
+          if [ -z "$(find "$DRIVER_DIR/pointProcmodule" -name '*.ko' -print -quit)" ]; then
+            echo "[ERROR] no .ko produced"
+            exit 1
+          fi
+
+          find "$DRIVER_DIR/pointProcmodule" -name '*.ko' -exec sh -c '
+            kmi="$1"
+            out="$2"
+            shift 2
+            for ko in "$@"; do
+              dest="$out/${kmi}_$(basename "$ko")"
+              cp "$ko" "$dest"
+              echo "Copied $ko -> $dest"
+              llvm-strip -d "$dest" || true
+              echo "Size after stripping: $(du -h "$dest" | cut -f1)"
+            done
+          ' sh "$KMI" "$OUT_DIR" {} +
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: aarch64-android14-6.1-pointproc
+          path: out/aarch64/android14-6.1_*.ko

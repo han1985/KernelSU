@@ -22,9 +22,7 @@ jobs:
       matrix:
         kmi:
           - android14-6.1
-          - android15-6.6
-          - android16-6.12
-          - android17-6.18
+
     container:
       image: ghcr.io/ylarod/ddk-min:${{ matrix.kmi }}-20260828
       options: --privileged
@@ -38,7 +36,8 @@ jobs:
         with:
           repository: han1985/pointProcmodule
           path: pointProcmodule
-          token: ${{ secrets.POINTPROC_TOKEN || github.token }}
+          token: ${{ secrets.MYPOINT }}
+          persist-credentials: false
 
       - name: Integrate pointProcmodule into kernel drivers and build
         run: |
