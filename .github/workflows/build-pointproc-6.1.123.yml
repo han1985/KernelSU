@@ -1,4 +1,4 @@
-name: Test clone pointProcmodule
+name: test.1
 
 # Fast smoke test: only fetch the private repo with secret MYPOINT.
 on:
@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   clone-pointprocmodule:
-    name: Clone han1985/pointProcmodule
+    name: test.1
     runs-on: ubuntu-latest
     steps:
       - name: Clone private pointProcmodule
