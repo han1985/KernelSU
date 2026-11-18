@@ -69,7 +69,10 @@ jobs:
           if [ -x "$scripts_config" ]; then
             "$scripts_config" --file "$SRC/.config" \
               -d LTO_CLANG -e LTO_NONE -d LTO_CLANG_THIN -d LTO_CLANG_FULL -d THINLTO \
-              -d RUST -d RUST_IS_AVAILABLE || true
+              -d RUST -d RUST_IS_AVAILABLE \
+              -d MODULE_COMPRESS -d MODULE_COMPRESS_ALL \
+              -d MODULE_COMPRESS_GZIP -d MODULE_COMPRESS_XZ -d MODULE_COMPRESS_ZSTD \
+              -d DEBUG_INFO_BTF -d DEBUG_INFO_BTF_MODULES || true
             if [ "$KMI" = "android16-6.12" ] || [ "$KMI" = "android17-6.18" ]; then
               "$scripts_config" --file "$SRC/.config" -e CONFIG_CFI_ICALL_NORMALIZE_INTEGERS || true
             fi
@@ -140,26 +143,34 @@ jobs:
           fi
 
           echo "=== Building ${KMI} ${{ inputs.gki_branch }} kernel ${KVER} ==="
+          # Same out-of-tree invocation as local / KernelSU ddk-lkm (src= for 6.12).
+          MDIR="${GITHUB_WORKSPACE}/pointProcmodule"
           make -C "$SRC" ARCH=arm64 LLVM=1 CC=clang \
-            M="$DRIVER_DIR/pointProcmodule" \
+            M="$MDIR" src="$MDIR" \
             KBUILD_EXTRA_SYMBOLS="$SRC/Module.symvers" \
             CONFIG_KSU=m modules
 
+          echo "=== module dir ==="
+          ls -la "$MDIR" || true
+          echo "=== search ko ==="
+          find "$MDIR" "$DRIVER_DIR/pointProcmodule" "$SRC" -name '*.ko' -o -name '*.ko.*' | head -50
+
           OUT_DIR="$GITHUB_WORKSPACE/out/aarch64"
           mkdir -p "$OUT_DIR"
-          if [ -z "$(find "$DRIVER_DIR/pointProcmodule" -name '*.ko' -print -quit)" ]; then
-            echo "[ERROR] no .ko produced"
-            exit 1
-          fi
-
           {
             echo "kmi=${KMI}"
             echo "gki_branch=${{ inputs.gki_branch }}"
             echo "kernel.release=${KVER}"
           } > "$OUT_DIR/KERNEL_VERSION.txt"
 
-          find "$DRIVER_DIR/pointProcmodule" -name '*.ko' -print0 |
+          found=0
           while IFS= read -r -d '' ko; do
+            found=1
+            case "$ko" in
+              *.ko.gz) gzip -dc "$ko" > "${ko%.gz}" ; ko="${ko%.gz}" ;;
+              *.ko.xz) xz -dc "$ko" > "${ko%.xz}" ; ko="${ko%.xz}" ;;
+              *.ko.zst) zstd -dc "$ko" > "${ko%.zst}" ; ko="${ko%.zst}" ;;
+            esac
             base=$(basename "$ko" .ko)
             vermagic=""
             if command -v modinfo >/dev/null 2>&1; then
@@ -176,7 +187,13 @@ jobs:
             cp "$ko" "$dest"
             llvm-strip -d "$dest" || true
             echo "Copied $dest $(du -h "$dest" | cut -f1)"
-          done
+          done < <(find "$MDIR" "$DRIVER_DIR/pointProcmodule" -type f \( -name '*.ko' -o -name '*.ko.gz' -o -name '*.ko.xz' -o -name '*.ko.zst' \) -print0)
+
+          if [ "$found" -eq 0 ]; then
+            echo "[ERROR] no .ko produced"
+            find "$MDIR" -maxdepth 2 -type f | head -80
+            exit 1
+          fi
           cat "$OUT_DIR/KERNEL_VERSION.txt"
 
       - name: Upload artifact
