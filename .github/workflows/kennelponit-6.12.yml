@@ -1,10 +1,8 @@
 name: KennelPonit-6.12.x
 
-# Same as local:
-#   /media/vm/AOSP/com6.12.x/common/drivers/<module>
-#   tools/bazel build //common/drivers/hwBreakpointProc_module:qcomdc
-# Bazel KERNEL_SRC == DDK /opt/ddk/kdir/android16-6.12
-#   make -C $KDIR M=common/drivers/pointProcmodule modules
+# Official android16-6.12 monthly GKI small versions:
+#   6.12.92 / 6.12.81 / 6.12.69 / 6.12.58 / 6.12.38
+# Layout matches local: common/drivers/pointProcmodule
 # Manual only.
 on:
   workflow_dispatch:
@@ -14,10 +12,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        kmi:
-          - android16-6.12
-    uses: ./.github/workflows/kennelponit-build.yml
+        include:
+          - gki_branch: android16-6.12-2026-09
+            kver: "6.12.92"
+          - gki_branch: android16-6.12-2026-06
+            kver: "6.12.81"
+          - gki_branch: android16-6.12-2026-03
+            kver: "6.12.69"
+          - gki_branch: android16-6.12-2025-12
+            kver: "6.12.58"
+          - gki_branch: android16-6.12-2025-09
+            kver: "6.12.38"
+    uses: ./.github/workflows/kennelponit-gki-build.yml
     secrets: inherit
     with:
-      kmi: ${{ matrix.kmi }}
+      kmi: android16-6.12
+      gki_branch: ${{ matrix.gki_branch }}
       ddk_release: "20260828"

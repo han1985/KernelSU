@@ -1,7 +1,10 @@
 name: KennelPonit GKI monthly build (reusable)
 
-# Build pointProcmodule against an AOSP kernel/common monthly branch
-# (real 6.12.x / 6.1.x / 6.6.x patch), using DDK only for Clang.
+# Local layout:
+#   com6.12.x/common/drivers/<module>
+#   make -C $KERNEL_SRC M=common/drivers/<module> modules
+# CI: clone kernel/common into ./common, drop module in common/drivers/pointProcmodule,
+# use DDK Module.symvers (same KMI).
 on:
   workflow_call:
     inputs:
@@ -24,7 +27,15 @@ jobs:
       image: ghcr.io/ylarod/ddk-min:${{ inputs.kmi }}-${{ inputs.ddk_release }}
       options: --privileged
     steps:
-      - name: Clone private pointProcmodule
+      - name: Clone AOSP kernel/common as ./common
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch "${{ inputs.gki_branch }}" \
+            https://android.googlesource.com/kernel/common \
+            "${GITHUB_WORKSPACE}/common"
+
+      - name: Clone pointProcmodule into common/drivers
         env:
           MYPOINT: ${{ secrets.MYPOINT }}
         shell: bash
@@ -34,19 +45,13 @@ jobs:
             echo "::error::Secret MYPOINT is empty on han1985/KernelSU."
             exit 1
           fi
+          MDIR="${GITHUB_WORKSPACE}/common/drivers/pointProcmodule"
           git clone --depth 1 \
             "https://x-access-token:${MYPOINT}@github.com/han1985/pointProcmodule.git" \
-            "${GITHUB_WORKSPACE}/pointProcmodule"
+            "$MDIR"
+          ls -la "$MDIR"
 
-      - name: Clone AOSP kernel/common ${{ inputs.gki_branch }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          git clone --depth 1 --branch "${{ inputs.gki_branch }}" \
-            https://android.googlesource.com/kernel/common \
-            "${GITHUB_WORKSPACE}/linux"
-
-      - name: Integrate and build pointProcmodule
+      - name: Build like local make -C common M=common/drivers/pointProcmodule
         id: build
         shell: bash
         run: |
@@ -54,47 +59,49 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE" || true
 
           KMI="${{ inputs.kmi }}"
-          SRC="${GITHUB_WORKSPACE}/linux"
+          SRC="${GITHUB_WORKSPACE}/common"
+          MDIR="${SRC}/drivers/pointProcmodule"
           DDK_KDIR="/opt/ddk/kdir/${KMI}"
-          export ARCH=arm64
-          export LLVM=1
-          export CC=clang
+          test -f "$MDIR/Makefile"
+
           if [ -n "${CLANG_PATH:-}" ] && [ ! -x "${CLANG_PATH}" ]; then
             export CLANG_PATH="$(command -v clang)"
           fi
+          export ARCH=arm64
+          export LLVM=1
+          export CC=clang
 
           echo "=== prepare ${{ inputs.gki_branch }} ==="
           make -C "$SRC" ARCH=arm64 LLVM=1 CC=clang gki_defconfig
-          scripts_config="$SRC/scripts/config"
-          if [ -x "$scripts_config" ]; then
-            "$scripts_config" --file "$SRC/.config" \
+          if [ -x "$SRC/scripts/config" ]; then
+            "$SRC/scripts/config" --file "$SRC/.config" \
               -d LTO_CLANG -e LTO_NONE -d LTO_CLANG_THIN -d LTO_CLANG_FULL -d THINLTO \
               -d RUST -d RUST_IS_AVAILABLE \
               -d MODULE_COMPRESS -d MODULE_COMPRESS_ALL \
               -d MODULE_COMPRESS_GZIP -d MODULE_COMPRESS_XZ -d MODULE_COMPRESS_ZSTD \
               -d DEBUG_INFO_BTF -d DEBUG_INFO_BTF_MODULES || true
             if [ "$KMI" = "android16-6.12" ] || [ "$KMI" = "android17-6.18" ]; then
-              "$scripts_config" --file "$SRC/.config" -e CONFIG_CFI_ICALL_NORMALIZE_INTEGERS || true
+              "$SRC/scripts/config" --file "$SRC/.config" -e CONFIG_CFI_ICALL_NORMALIZE_INTEGERS || true
             fi
           fi
           make -C "$SRC" ARCH=arm64 LLVM=1 CC=clang modules_prepare
 
-          # modules_prepare does not generate Module.symvers. Without it modpost
-          # treats memcpy/printk/kfree as undefined. Reuse DDK's prebuilt GKI
-          # symbol table (same KMI).
-          DDK_SYMVERS=""
-          if [ -f "$DDK_KDIR/Module.symvers" ]; then
-            DDK_SYMVERS="$DDK_KDIR/Module.symvers"
-          else
+          DDK_SYMVERS="$DDK_KDIR/Module.symvers"
+          if [ ! -f "$DDK_SYMVERS" ]; then
             DDK_SYMVERS=$(find /opt/ddk/kdir -name Module.symvers -print -quit || true)
           fi
-          if [ -z "$DDK_SYMVERS" ] || [ ! -f "$DDK_SYMVERS" ]; then
-            echo "[ERROR] DDK Module.symvers not found under $DDK_KDIR"
-            ls -la "$DDK_KDIR" | head
-            exit 1
-          fi
+          test -f "$DDK_SYMVERS"
           cp "$DDK_SYMVERS" "$SRC/Module.symvers"
-          echo "=== using Module.symvers from $DDK_SYMVERS ($(wc -l < "$SRC/Module.symvers") symbols) ==="
+          echo "=== Module.symvers from $DDK_SYMVERS ($(wc -l < "$SRC/Module.symvers") symbols) ==="
+
+          DRIVER_MAKEFILE="$SRC/drivers/Makefile"
+          if [ -f "$DRIVER_MAKEFILE" ]; then
+            sed -i '/obj-\$(CONFIG_KSU)[[:space:]]*+=[[:space:]]*kernelsu\//d' "$DRIVER_MAKEFILE"
+            if ! grep -qE 'pointProcmodule/' "$DRIVER_MAKEFILE"; then
+              sed -i -e '$a\' "$DRIVER_MAKEFILE"
+              echo 'obj-m += pointProcmodule/' >> "$DRIVER_MAKEFILE"
+            fi
+          fi
 
           KVER=""
           if [ -f "$SRC/include/config/kernel.release" ]; then
@@ -111,49 +118,11 @@ jobs:
           echo "=== kernel.release: ${KVER} ==="
           echo "kver=${KVER_SAFE}" >> "$GITHUB_OUTPUT"
 
-          if [ -d "$SRC/common/drivers" ]; then
-            DRIVER_DIR="$SRC/common/drivers"
-          elif [ -d "$SRC/drivers" ]; then
-            DRIVER_DIR="$SRC/drivers"
-          else
-            echo "[ERROR] drivers/ not found under $SRC"
-            ls -la "$SRC" | head
-            exit 1
-          fi
-
-          DRIVER_MAKEFILE="$DRIVER_DIR/Makefile"
-          test -f "$DRIVER_MAKEFILE"
-          test -d "$GITHUB_WORKSPACE/pointProcmodule"
-
-          rm -rf "$DRIVER_DIR/pointProcmodule"
-          cp -a "$GITHUB_WORKSPACE/pointProcmodule" "$DRIVER_DIR/pointProcmodule"
-          rm -rf "$DRIVER_DIR/pointProcmodule/.git"
-
-          sed -i '/obj-\$(CONFIG_KSU)[[:space:]]*+=[[:space:]]*kernelsu\//d' "$DRIVER_MAKEFILE"
-          if ! grep -qE 'obj-\$\(CONFIG_KSU\)[[:space:]]*\+=[[:space:]]*pointProcmodule/' "$DRIVER_MAKEFILE"; then
-            sed -i -e '$a\' "$DRIVER_MAKEFILE"
-            echo 'obj-$(CONFIG_KSU) += pointProcmodule/' >> "$DRIVER_MAKEFILE"
-          fi
-
-          if [ -f "$DRIVER_DIR/pointProcmodule/Kconfig" ] && [ -f "$DRIVER_DIR/Kconfig" ]; then
-            if ! grep -q 'pointProcmodule/Kconfig' "$DRIVER_DIR/Kconfig"; then
-              sed -i '/endmenu/i source "drivers/pointProcmodule/Kconfig"' "$DRIVER_DIR/Kconfig" \
-                || echo 'source "drivers/pointProcmodule/Kconfig"' >> "$DRIVER_DIR/Kconfig"
-            fi
-          fi
-
-          echo "=== Building ${KMI} ${{ inputs.gki_branch }} kernel ${KVER} ==="
-          # Same out-of-tree invocation as local / KernelSU ddk-lkm (src= for 6.12).
-          MDIR="${GITHUB_WORKSPACE}/pointProcmodule"
-          make -C "$SRC" ARCH=arm64 LLVM=1 CC=clang \
-            M="$MDIR" src="$MDIR" \
-            KBUILD_EXTRA_SYMBOLS="$SRC/Module.symvers" \
-            CONFIG_KSU=m modules
+          echo "=== make -C $SRC M=$MDIR modules ==="
+          make -C "$SRC" M="$MDIR" ARCH=arm64 LLVM=1 CC=clang modules
 
           echo "=== module dir ==="
-          ls -la "$MDIR" || true
-          echo "=== search ko ==="
-          find "$MDIR" "$DRIVER_DIR/pointProcmodule" "$SRC" -name '*.ko' -o -name '*.ko.*' | head -50
+          ls -la "$MDIR"
 
           OUT_DIR="$GITHUB_WORKSPACE/out/aarch64"
           mkdir -p "$OUT_DIR"
@@ -167,9 +136,9 @@ jobs:
           while IFS= read -r -d '' ko; do
             found=1
             case "$ko" in
-              *.ko.gz) gzip -dc "$ko" > "${ko%.gz}" ; ko="${ko%.gz}" ;;
-              *.ko.xz) xz -dc "$ko" > "${ko%.xz}" ; ko="${ko%.xz}" ;;
-              *.ko.zst) zstd -dc "$ko" > "${ko%.zst}" ; ko="${ko%.zst}" ;;
+              *.ko.gz) gzip -dc "$ko" > "${ko%.gz}"; ko="${ko%.gz}" ;;
+              *.ko.xz) xz -dc "$ko" > "${ko%.xz}"; ko="${ko%.xz}" ;;
+              *.ko.zst) zstd -dc "$ko" > "${ko%.zst}"; ko="${ko%.zst}" ;;
             esac
             base=$(basename "$ko" .ko)
             vermagic=""
@@ -187,7 +156,7 @@ jobs:
             cp "$ko" "$dest"
             llvm-strip -d "$dest" || true
             echo "Copied $dest $(du -h "$dest" | cut -f1)"
-          done < <(find "$MDIR" "$DRIVER_DIR/pointProcmodule" -type f \( -name '*.ko' -o -name '*.ko.gz' -o -name '*.ko.xz' -o -name '*.ko.zst' \) -print0)
+          done < <(find "$MDIR" -type f \( -name '*.ko' -o -name '*.ko.gz' -o -name '*.ko.xz' -o -name '*.ko.zst' \) -print0)
 
           if [ "$found" -eq 0 ]; then
             echo "[ERROR] no .ko produced"
