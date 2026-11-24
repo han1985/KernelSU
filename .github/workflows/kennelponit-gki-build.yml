@@ -153,9 +153,12 @@ jobs:
             fi
             ko_kver_safe=$(printf '%s' "$ko_kver" | tr '/ :' '---')
             dest="$OUT_DIR/${KMI}_${ko_kver_safe}_${base}.ko"
+            dest_strip="$OUT_DIR/${KMI}_${ko_kver_safe}_${base}.stripped.ko"
             cp "$ko" "$dest"
-            llvm-strip -d "$dest" || true
-            echo "Copied $dest $(du -h "$dest" | cut -f1)"
+            cp "$ko" "$dest_strip"
+            llvm-strip -d "$dest_strip" || true
+            echo "Copied unstripped $dest $(du -h "$dest" | cut -f1)"
+            echo "Copied stripped   $dest_strip $(du -h "$dest_strip" | cut -f1)"
           done < <(find "$MDIR" -type f \( -name '*.ko' -o -name '*.ko.gz' -o -name '*.ko.xz' -o -name '*.ko.zst' \) -print0)
 
           if [ "$found" -eq 0 ]; then

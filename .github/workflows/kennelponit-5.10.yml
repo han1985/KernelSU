@@ -1,0 +1,22 @@
+name: KennelPonit-5.10.x
+
+# Same KMI/image as original KernelSU .github/workflows/build-lkm.yml + ddk-lkm.yml:
+#   android12-5.10  ->  ghcr.io/ylarod/ddk-min:android12-5.10-20260828
+#   android13-5.10  ->  ghcr.io/ylarod/ddk-min:android13-5.10-20260828
+# Manual only.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        kmi:
+          - android12-5.10
+          - android13-5.10
+    uses: ./.github/workflows/kennelponit-build.yml
+    secrets: inherit
+    with:
+      kmi: ${{ matrix.kmi }}
+      ddk_release: "20260828"
