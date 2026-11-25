@@ -2,6 +2,8 @@ name: KennelPonit-5.15.x
 
 # Official android13-5.15 monthly GKI small version:
 #   5.15.123  ->  android13-5.15-2023-11
+# kernel/common freeze branch now lives at deprecated/android13-5.15-2023-11
+# (clone fallback is in kennelponit-gki-build.yml).
 # Layout matches local: common/drivers/pointProcmodule
 # Manual only.
 on:

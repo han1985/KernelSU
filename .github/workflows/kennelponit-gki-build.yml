@@ -31,9 +31,44 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git clone --depth 1 --branch "${{ inputs.gki_branch }}" \
-            https://android.googlesource.com/kernel/common \
-            "${GITHUB_WORKSPACE}/common"
+          REF="${{ inputs.gki_branch }}"
+          REPO="https://android.googlesource.com/kernel/common"
+          DEST="${GITHUB_WORKSPACE}/common"
+          export GIT_TERMINAL_PROMPT=0
+
+          try_clone() {
+            local ref="$1"
+            rm -rf "$DEST"
+            echo "=== git clone --depth 1 --branch ${ref} ==="
+            git clone --depth 1 --single-branch --branch "$ref" "$REPO" "$DEST"
+          }
+
+          picked=""
+          if try_clone "$REF"; then
+            picked="$REF"
+          elif try_clone "deprecated/${REF}"; then
+            picked="deprecated/${REF}"
+          else
+            TAG=$(
+              git ls-remote --tags "$REPO" "${REF}_r*" \
+                | awk '{print $2}' \
+                | sed -e 's#^refs/tags/##' -e 's#\^{}$##' \
+                | grep -E "^${REF}_r[0-9]+$" \
+                | awk -F'_r' '{print $NF "\t" $0}' \
+                | sort -n \
+                | tail -n1 \
+                | cut -f2 || true
+            )
+            if [ -z "${TAG:-}" ]; then
+              echo "::error::No kernel/common ref for ${REF} (branch, deprecated/${REF}, or ${REF}_r*)"
+              exit 1
+            fi
+            try_clone "$TAG"
+            picked="$TAG"
+          fi
+          echo "cloned kernel/common ref: ${picked}"
+          git -C "$DEST" log -1 --oneline
+          git -C "$DEST" describe --tags --always || true
 
       - name: Clone pointProcmodule into common/drivers
         env:
