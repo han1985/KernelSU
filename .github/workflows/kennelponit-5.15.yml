@@ -1,8 +1,8 @@
 name: KennelPonit-5.15.x
 
-# Same KMI/image as original KernelSU .github/workflows/build-lkm.yml + ddk-lkm.yml:
-#   android13-5.15  ->  ghcr.io/ylarod/ddk-min:android13-5.15-20260828
-#   android14-5.15  ->  ghcr.io/ylarod/ddk-min:android14-5.15-20260828
+# Official android13-5.15 monthly GKI small version:
+#   5.15.123  ->  android13-5.15-2023-11
+# Layout matches local: common/drivers/pointProcmodule
 # Manual only.
 on:
   workflow_dispatch:
@@ -12,11 +12,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        kmi:
-          - android13-5.15
-          - android14-5.15
-    uses: ./.github/workflows/kennelponit-build.yml
+        include:
+          - gki_branch: android13-5.15-2023-11
+            kver: "5.15.123"
+    uses: ./.github/workflows/kennelponit-gki-build.yml
     secrets: inherit
     with:
-      kmi: ${{ matrix.kmi }}
+      kmi: android13-5.15
+      gki_branch: ${{ matrix.gki_branch }}
       ddk_release: "20260828"
